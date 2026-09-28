@@ -8,4 +8,4 @@ Requires Node.js 22.12+ (22.x), 24.x, or 26+ and npm. Install with `npm ci`, the
 - `npm run build` — TypeScript check and production build.
 - `npx playwright install chromium` — install the browser used by Playwright (once per machine).
 - `npm run test:e2e` — build and open the app shell in a production preview.
-- `python3 -m unittest discover -s tests -v` — existing static word-list checks.
+- `npm run words:build` — regenerate the static lists from the pinned ESDB snapshot; `npm test` checks them.

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { loadWordLists, type WordLists } from './wordLists';
+import { loadWordData, type WordData } from './wordLists';
+
+const lengths = [4, 5, 6] as const;
 
 type LoadState =
   | { status: 'loading' }
-  | { status: 'loaded'; lists: WordLists }
+  | { status: 'loaded'; data: WordData }
   | { status: 'error' };
 
 export function App() {
@@ -11,8 +13,8 @@ export function App() {
 
   useEffect(() => {
     let active = true;
-    loadWordLists().then(
-      (lists) => { if (active) setState({ status: 'loaded', lists }); },
+    loadWordData().then(
+      (data) => { if (active) setState({ status: 'loaded', data }); },
       () => { if (active) setState({ status: 'error' }); },
     );
     return () => { active = false; };
@@ -25,12 +27,20 @@ export function App() {
       {state.status === 'error' && <p role="alert">Could not load word lists. Reload to try again.</p>}
       {state.status === 'loaded' && (
         <section role="status" aria-label="Loaded word lists">
-          <p>Word lists loaded:</p>
-          <ul>
-            {([4, 5, 6] as const).map((length) => (
-              <li key={length}>{length}-letter: {state.lists[length].length.toLocaleString('en-GB')}</li>
-            ))}
-          </ul>
+          <table>
+            <thead>
+              <tr><th>Letters</th><th>Answers</th><th>Accepted guesses</th></tr>
+            </thead>
+            <tbody>
+              {lengths.map((length) => (
+                <tr key={length}>
+                  <th scope="row">{length}</th>
+                  <td>{state.data.answers[length].length.toLocaleString('en-GB')}</td>
+                  <td>{state.data.guesses[length].length.toLocaleString('en-GB')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
       )}
     </main>

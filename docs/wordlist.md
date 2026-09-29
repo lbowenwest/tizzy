@@ -12,4 +12,4 @@ The source is the [English Speller Database (ESDB)](https://github.com/en-wl/wor
 
 Each asset is a sorted, unique, newline-delimited **accepted-guess** list. A later task will curate a smaller set of answers; these lists are not yet suitable for random puzzle answers. `public/words/COPYRIGHT.txt` is the upstream copyright and permission notice. Include an accessible attribution link to that notice when the player UI is built.
 
-Regenerate with `npm run words:build` and verify with `npm test` and `npm run test:e2e`. Vite copies `public/words/` into the static build, serving `/words/4.txt`, `/words/5.txt`, `/words/6.txt`, and `/words/COPYRIGHT.txt`. App-level loading remains the F3 task.
+Regenerate with `npm run words:build` and verify with `npm test` and `npm run test:e2e`. Vite copies `public/words/` into the static build, serving `/words/4.txt`, `/words/5.txt`, `/words/6.txt`, and `/words/COPYRIGHT.txt`. The app now loads these paths in both Vite development and production preview; missing or malformed lists produce a visible error. No development proxy is needed because Vite serves `public/` at the site root.

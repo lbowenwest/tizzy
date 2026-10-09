@@ -2,9 +2,9 @@
 
 ## Authority and sequencing
 
-[Game design](design.md) defines the agreed rules; [codebase architecture](codebase.md) defines the agreed React/TypeScript/Vite approach. **The UI has not yet been designed.** No gameplay UI should be implemented from an invented layout. First obtain the word source, establish the application and its data-loading path, then produce and approve a UI design before building the game. This is a plan, not permission to execute it.
+[Game design](design.md) defines the agreed rules; [codebase architecture](codebase.md) defines the agreed React/TypeScript/Vite approach. The shared mobile-first layout and selectable themes have been approved in conversation and are recorded in [ui.md](ui.md). No gameplay UI should be implemented from an invented layout. First obtain the word source, establish the application and its data-loading path, then produce and approve a UI design before building the game. This is a plan, not permission to execute it.
 
-The repository currently has only documents: no application, lockfile, tests, word assets, or UI specification. The phases below identify observable checkpoints, not estimates or one task per file. Use the agreed static React app, framework-independent puzzle and round logic, ESDB source, and no backend/account/daily limit/ITV assets.
+The phases below identify observable checkpoints, not estimates or one task per file. F1–F3, G1 and the shared untimed U1 presentation are implemented. The frontend pass implements G2–G4 and the untimed settings/persistence subset of G7; G5/G6 and complete timed presets remain deferred. Physical iOS/native-keyboard validation is still outstanding. Use the agreed static React app, framework-independent puzzle and round logic, ESDB source, and no backend/account/daily limit/ITV assets.
 
 ## Foundations
 

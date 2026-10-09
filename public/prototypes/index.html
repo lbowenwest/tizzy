@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word practice · UI studies</title>
+  <link rel="stylesheet" href="./prototype.css">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script type="module" src="./prototype.js"></script>
+</head>
+<body data-theme="letterpress">
+  <div class="study-bar">
+    <span class="study-label">LAYOUT TRIAL <span> / SELECT A THEME</span></span>
+    <nav aria-label="Preview themes">
+      <a href="?theme=letterpress" data-direction="letterpress">01 Letterpress</a>
+      <a href="?theme=afterhours" data-direction="afterhours">02 Afterhours</a>
+      <a href="?theme=club" data-direction="club">03 Word Club</a>
+    </nav>
+    <span class="study-note">Prototype · not a live game</span>
+  </div>
+  <div class="app">
+    <header class="masthead">
+      <div class="wordmark"><span class="brand-symbol" aria-hidden="true">w.</span> <span>word practice</span></div>
+      <div class="header-actions"><button class="quiet" id="help-button">How to play</button><button class="settings-button" id="settings-button">Settings <span aria-hidden="true">↗</span></button></div>
+    </header>
+    <main class="composition">
+      <section class="play-area" aria-label="Example word puzzle">
+        <div class="play-header"><div><p class="eyebrow" id="format-label">SINGLE WORD</p><h2 id="play-title">Find the five.</h2></div><div class="clock-pill" id="clock-pill">∞ <span>Untimed</span></div></div>
+        <div class="sequence" id="sequence" hidden aria-label="Sequence progress"><span class="current">4 letters <b>NOW</b></span><span>5 letters</span><span>6 letters</span></div>
+        <div class="puzzle-meta"><span id="guess-count">Guess 3 of 5</span><span id="length-label">5 letters · first letter given</span></div>
+        <div class="board" id="board" aria-label="Five-guess example board"></div>
+        <div class="result" id="result" hidden aria-live="polite"></div>
+        <p class="feedback" id="feedback" role="status">Your next guess starts with <strong>C</strong>.</p>
+        <div class="legend" aria-label="Letter feedback legend"><span><i class="correct">✓</i> Right place</span><span><i class="present">↔</i> Elsewhere</span><span><i class="absent">×</i> Not in word</span></div>
+        <label class="input-label" for="guess-input">Your guess <span>The C is supplied</span></label>
+        <div class="entry"><input id="guess-input" aria-label="Letters after the supplied C" placeholder="Type the remaining letters" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="4"><button id="submit-button" class="primary">Check <span aria-hidden="true">↵</span></button></div>
+        <div class="keyboard" id="keyboard" aria-label="On-screen keyboard"></div>
+        <div class="play-footer"><span id="footer-note">Five guesses. A fresh word whenever you like.</span><button id="reset-button" class="text-button">Reset example ↺</button></div>
+      </section>
+    </main>
+    <footer class="site-footer"><span>ENGLISH WORD PRACTICE</span><a href="/words/COPYRIGHT.txt">Word-list credits ↗</a><span>No daily limit.</span></footer>
+  </div>
+  <section class="preview-tools" aria-label="Prototype state controls">
+    <span>PREVIEW STATE</span>
+    <div id="state-buttons">
+      <button data-state="play" aria-pressed="true">In play</button><button data-state="won" aria-pressed="false">Solved</button><button data-state="lost" aria-pressed="false">Word failed</button><button data-state="round-ended" aria-pressed="false">Round expired</button><button data-state="loading" aria-pressed="false">Loading</button><button data-state="error" aria-pressed="false">Unavailable</button>
+    </div>
+    <p>Sample letters, frozen clocks, illustrative presets. Switch states to compare the design—not the rules.</p>
+  </section>
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <form id="settings-form">
+      <div class="dialog-heading"><p class="eyebrow">MAKE IT YOURS</p><button type="button" class="close" aria-label="Close settings">×</button></div>
+      <h2 id="settings-title">Your kind of wordplay.</h2>
+      <p class="dialog-copy">Choose a starting point, then make it your own. Changes apply to the next round.</p>
+      <label>Appearance<select id="theme-select" aria-label="Appearance"><option value="letterpress">Letterpress</option><option value="afterhours">Afterhours</option><option value="club">Word Club</option></select></label>
+      <p class="appearance-note">Theme changes only the look—not your word or rules.</p>
+      <label>Starting point<select id="preset"><option value="practice">Practice · untimed</option><option value="sequence">4 → 5 → 6 · untimed</option><option value="custom">Custom</option></select></label>
+      <div class="form-grid">
+        <label>Round format<select id="format"><option value="single">Single word</option><option value="sequence">4 → 5 → 6</option></select></label>
+        <label>Word length<select id="length"><option>4</option><option selected>5</option><option>6</option></select></label>
+        <label>Word clock<select id="word-clock" aria-label="Word clock"><option value="off">Off</option><option value="word">Per word</option><option value="guess">Per guess</option></select></label>
+        <label>Seconds<input id="word-seconds" type="number" min="1" max="3600" value="30" disabled></label>
+        <label>Overall round clock<select id="round-clock"><option value="off">Off</option><option value="on">On · sequence only</option></select></label>
+        <label>Seconds<input id="round-seconds" type="number" min="1" max="3600" value="90" disabled></label>
+      </div>
+      <label>Unknown submitted word<select id="invalid-policy"><option value="reject">Reject · keep trying</option><option value="fail">End the current word</option></select></label>
+      <p class="settings-footnote">Five attempts. First letter supplied. Clocks are off by default.<br>Timer values here are illustrative, not settled presets.</p>
+      <button class="primary apply" type="submit">Apply to next example <span aria-hidden="true">→</span></button>
+    </form>
+  </dialog>
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <div class="dialog-heading"><p class="eyebrow">THE LITTLE GUIDE</p><button class="close" aria-label="Close guide">×</button></div>
+    <h2 id="help-title">Follow the letters.</h2>
+    <p>You get the first letter and five guesses. Each accepted guess shows what belongs, and where. In a 4 → 5 → 6 round, solve a word to move up; a failed word is replaced at the same length.</p>
+    <p>This prototype shows sample feedback only. Type or tap letters to try the input, then use the preview controls to see results. It does not check the dictionary or run clocks.</p>
+  </dialog>
+</body>
+</html>

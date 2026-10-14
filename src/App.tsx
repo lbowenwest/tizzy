@@ -49,10 +49,10 @@ export function App() {
           setDialog(null);
         }} />}
       {dialog === 'help' && <Dialog title="Follow the letters." titleId="help-title" onClose={() => setDialog(null)}>
-        <p>You get the first letter and five guesses. Type the whole word, including the first letter, or tap the keyboard, then check your word. Gray keys marked × are letters confirmed absent; you can still use them in guesses.</p>
+        <p>You get the first letter and a configurable guess limit (five by default). Choose 1–10 guesses per word or Unlimited in Settings. Final sprint uses unlimited guesses with a 90-second overall clock. With Unlimited, Give up reveals the answer; continue explicitly with another word at the same sequence length. The round clock pauses after giving up or solving a word and resumes with the same remaining time when you continue. Tap the letter keys to enter the whole word, including the first letter, then tap ENTER. Delete removes the last letter. Physical keyboards and pasting work too; the guess display is not a text field and won't open a mobile keyboard. Keys show the strongest checked feedback: ✓ right place, ↔ elsewhere, or × absent. All keys remain usable.</p>
         <ul className="help-list"><li>✓ Right place: that letter is exactly where it belongs.</li><li>↔ Elsewhere: the letter is in the answer, in another position.</li><li>× Not in word: no unmatched copy of that letter remains.</li></ul>
-        <p>In a 4 → 5 → 6 round, solve a word to move up. A failed word is replaced at the same length. Unknown submitted words either cost no guess or end the word, depending on your settings.</p>
-        <p>There is no daily limit. This version is untimed. <a href={import.meta.env.BASE_URL + 'fonts/README.txt'}>Typeface credits</a>.</p>
+        <p>In a 4 → 5 → 6 round, solve a word to move up. A failed word is replaced at the same length. Unknown submitted words can be rejected for free, use one guess without letter clues, or end the word, depending on your settings.</p>
+        <p>There is no daily limit. Choose untimed practice or a timed preset in Settings. The preset preview shows its rules; Apply now restarts this round, while Save for next round preserves current play. Word timeouts fail one word; the overall sequence clock ends the whole round. During play, clocks keep running across tab switches and while help or settings is open. A paused result stays paused across those events. <a href={import.meta.env.BASE_URL + 'fonts/README.txt'}>Typeface credits</a>.</p>
       </Dialog>}
     </div>
   );

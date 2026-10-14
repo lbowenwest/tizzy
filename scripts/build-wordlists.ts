@@ -18,6 +18,11 @@ const tierSource = {
   path: join(root, 'vendor/esdb-2026.02.25-sizes.txt'),
   hash: 'd5dd185fe19c6ae66d21f37d039d74fb6983c347c0086962c7b4c21bdbc16860',
 };
+// Upstream word-form tags distinguish plural nouns from verbs and other senses.
+const pluralSource = {
+  path: join(root, 'vendor/esdb-2026.02.25-plural-nouns.txt'),
+  hash: '612b7950b8d8954fd7ccf43976a23ed49dd0b1f1054c2e77d37c5220557d741f',
+};
 
 function readPinned({ path, hash }: { path: string; hash: string }): string {
   const raw = readFileSync(path);
@@ -42,6 +47,8 @@ const commonWords = new Set(
     .map(([word]) => word),
 );
 
+const pluralNouns = new Set(readPinned(pluralSource).split(/\r?\n/).filter(Boolean));
+
 const excluded = new Set(
   readFileSync(join(root, 'data/excluded-answers.txt'), 'utf8')
     .split(/\r?\n/)
@@ -55,7 +62,7 @@ const guesses = new Map(lengths.map((length) => [length, byLength(length, guessW
 const answers = new Map(
   lengths.map((length) => [
     length,
-    byLength(length, new Set([...commonWords].filter((word) => guessWords.has(word) && !excluded.has(word)))),
+    byLength(length, new Set([...commonWords].filter((word) => guessWords.has(word) && !excluded.has(word) && !pluralNouns.has(word)))),
   ] as const),
 );
 

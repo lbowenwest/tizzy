@@ -46,7 +46,7 @@ a {
 button,a,input,select {
   -webkit-tap-highlight-color:transparent
 }
-button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,.guess-display:focus-visible {
   outline:3px solid var(--focus);
   outline-offset:3px
 }
@@ -62,14 +62,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
   --correct-ink:#fff;
   --present:#e7bd61;
   --absent:#deded4;
-  --unavailable:#c9cbc4;
-  --unavailable-ink:#38433c;
+  --key-bg:#deded4;
+  --unavailable:#697367;
+  --unavailable-ink:#fffdf2;
   --tile-ink:#253b31;
   --display:"Fraunces",Georgia,serif;
   --tile-font:"Fraunces",Georgia,serif;
   --radius:3px;
   --panel-shadow:none;
   --focus:#aa621d;
+  --timer-alert:#8b391f;
   min-height:100dvh;
   color:var(--ink);
   background:var(--paper);
@@ -153,6 +155,57 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
   letter-spacing:-.5px;
   margin:4px 0 0
 }
+.clock-strip {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:6px;
+}
+.clock-name {
+  font:500 9px "DM Sans",sans-serif;
+  margin-right:8px;
+}
+.clock-with-progress {
+  --clock-fill:var(--accent);
+  display:grid;
+  gap:4px;
+  min-width:72px;
+}
+.clock-readout {
+  display:flex;
+  justify-content:space-between;
+}
+.clock-pill[data-low] {
+  --clock-fill:var(--timer-alert);
+  color:var(--timer-alert);
+  font-weight:600;
+}
+.clock-warning {
+  margin-left:4px;
+}
+.timer-progress {
+  display:block;
+  appearance:none;
+  width:72px;
+  height:5px;
+  border:0;
+  border-radius:3px;
+  overflow:hidden;
+  background:var(--line);
+  color:var(--clock-fill);
+}
+.timer-progress::-webkit-progress-bar {
+  background:var(--line);
+  border-radius:3px;
+}
+.timer-progress::-webkit-progress-value {
+  background:var(--clock-fill);
+  border-radius:3px;
+}
+.timer-progress::-moz-progress-bar {
+  background:var(--clock-fill);
+  border-radius:3px;
+}
 .clock-pill {
   font:500 13px "IBM Plex Mono",monospace;
   white-space:nowrap
@@ -171,6 +224,18 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
   gap:6px;
   width:min(100%,calc(var(--length)*var(--tile-size) + (var(--length) - 1)*6px));
   margin:0 auto
+}
+.board[data-unlimited] {
+  max-height:calc(5*var(--tile-size) + 24px);
+  overflow-y:auto;
+  grid-auto-rows:max-content;
+  scrollbar-width:thin;
+}
+.board-history {
+  margin:8px 0;
+  color:var(--muted);
+  font-size:11px;
+  text-align:center;
 }
 .board-row {
   display:grid;
@@ -203,6 +268,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
   background:var(--absent);
   color:var(--tile-ink);
   border-color:var(--absent)
+}
+.tile.unscored {
+  border-style:dashed;
 }
 .tile-mark {
   position:absolute;
@@ -270,32 +338,22 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
 .input-label span {
   color:var(--muted)
 }
-.entry {
+.guess-display {
   display:flex;
   align-items:center;
+  justify-content:center;
+  min-height:44px;
   border:1px solid var(--line);
   background:var(--paper);
   border-radius:var(--radius);
-  padding:4px;
-  gap:8px
+  padding:8px 12px;
+  font:500 18px "IBM Plex Mono",monospace;
+  letter-spacing:3px;
 }
-.entry input {
-  width:100%;
-  min-width:0;
-  background:none;
-  border:0;
-  padding:0 8px;
-  font-size:16px;
-  color:var(--ink);
-  text-transform:uppercase;
-  min-height:44px;
-  letter-spacing:3px
-}
-.entry input::placeholder {
-  text-transform:none;
-  font-size:12px;
+.guess-placeholder {
+  font:500 12px "DM Sans",sans-serif;
   letter-spacing:0;
-  color:var(--muted)
+  color:var(--muted);
 }
 .primary,.secondary {
   min-height:44px;
@@ -317,6 +375,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
   background:none;
   color:var(--ink)
 }
+.give-up {
+  display:block;
+  margin:16px auto 0;
+}
 @media(hover:hover) {
   .primary:hover {
     filter:brightness(1.12)
@@ -328,26 +390,37 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
 }
 .keyboard {
   display:grid;
-  gap:5px;
+  gap:6px;
   margin-top:14px
 }
 .key-row {
-  display:flex;
+  display:grid;
+  grid-template-columns:repeat(20,minmax(0,1fr));
   gap:4px;
-  justify-content:center
 }
 .key {
-  flex:1;
-  max-width:44px;
+  grid-column:span 2;
   min-width:0;
-  min-height:44px;
-  border:1px solid var(--line);
-  border-radius:var(--radius);
-  background:var(--paper);
-  font:500 14px "IBM Plex Mono",monospace;
+  min-height:56px;
+  padding:0;
+  border:1px solid transparent;
+  border-radius:5px;
+  background:var(--key-bg);
+  font:600 14px "IBM Plex Mono",monospace;
   transition:transform .1s;
   position:relative;
-  touch-action:manipulation
+  touch-action:manipulation;
+}
+.key.correct {
+  background:var(--correct);
+  color:var(--correct-ink);
+}
+.key.present {
+  background:var(--present);
+  color:var(--tile-ink);
+}
+.key:active {
+  transform:translateY(1px);
 }
 .key.unavailable {
   background:var(--unavailable);
@@ -371,9 +444,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
   white-space:nowrap;
   border:0;
 }
+.key-command {
+  grid-column:span 3;
+  font:700 10px "DM Sans",sans-serif;
+}
 .key.backspace {
-  max-width:67px;
-  flex:1.5
+  font-size:20px;
 }
 .play-footer {
   margin:18px 0 0;
@@ -488,6 +564,43 @@ dialog h2 {
   line-height:1.7;
   color:var(--muted)
 }
+.timing-settings {
+  border:0;
+  border-top:1px solid var(--line);
+  padding:14px 0 0;
+  margin:20px 0 0;
+}
+.timing-settings legend {
+  padding:0 8px 0 0;
+  font-size:12px;
+}
+dialog input[type="number"] {
+  width:100%;
+  min-width:0;
+  min-height:44px;
+  font:inherit;
+  font-size:16px;
+  padding:11px 8px;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  color:var(--ink);
+  background:var(--paper);
+}
+dialog input:disabled {
+  opacity:.6;
+}
+dialog .round-clock-toggle {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:44px;
+  margin:14px 0 0;
+}
+.round-clock-toggle input {
+  width:20px;
+  height:20px;
+  accent-color:var(--accent);
+}
 .field {
   margin-top:16px
 }
@@ -520,9 +633,73 @@ dialog .settings-footnote {
   line-height:1.8;
   margin:16px 0
 }
+.settings-preview {
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--paper);
+  padding:12px;
+  margin-top:16px;
+}
+.settings-preview p {
+  margin:0;
+  font-size:12px;
+}
+.settings-preview .eyebrow {
+  font-size:10px;
+  color:var(--ink);
+  margin-bottom:6px;
+}
+dialog[open]:has(.settings-form) {
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+dialog:has(.settings-form) > :is(.dialog-heading,h2) {
+  flex-shrink:0;
+}
+.settings-form {
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+}
+.settings-fields {
+  min-height:0;
+  overflow:auto;
+  overscroll-behavior:contain;
+  padding:0 6px 8px;
+  margin:0 -6px;
+}
+.settings-apply {
+  flex-shrink:0;
+  background:var(--surface);
+  border-top:1px solid var(--line);
+  padding:12px 0 0;
+}
+.settings-apply p {
+  font-size:11px;
+  line-height:1.5;
+  margin:8px 0 0;
+}
 .settings-actions {
   display:grid;
-  gap:10px
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.settings-actions button {
+  min-width:0;
+  white-space:normal;
+  padding:10px 8px;
+}
+.settings-form .field {
+  scroll-margin-block:12px;
+}
+.pending-settings {
+  border-left:3px solid var(--accent);
+  font-size:11px;
+  line-height:1.6;
+  padding:8px 12px;
+  margin:0 0 12px;
+  background:var(--surface);
 }
 .app-shell[data-theme="afterhours"] {
   --paper:#111419;
@@ -536,7 +713,8 @@ dialog .settings-footnote {
   --correct-ink:#112a21;
   --present:#e0b973;
   --absent:#3c424d;
-  --unavailable:#444b55;
+  --key-bg:#59616b;
+  --unavailable:#343b45;
   --unavailable-ink:#c0c5ce;
   --tile-ink:#f3f1e7;
   --display:"Barlow Condensed",Impact,sans-serif;
@@ -544,9 +722,10 @@ dialog .settings-footnote {
   --radius:7px;
   --panel-shadow:0 16px 50px #0003;
   --focus:#ffc267;
+  --timer-alert:#ff977c;
   background-image:radial-gradient(ellipse at 50% 40%,#23352e4f,transparent 65%)
 }
-.app-shell[data-theme="afterhours"] .tile.present,.app-shell[data-theme="afterhours"] .legend .present {
+.app-shell[data-theme="afterhours"] .tile.present,.app-shell[data-theme="afterhours"] .legend .present,.app-shell[data-theme="afterhours"] .key.present {
   color:#302619
 }
 .app-shell[data-theme="club"] {
@@ -560,6 +739,9 @@ dialog .settings-footnote {
   --correct:#1e6556;
   --present:#ef936d;
   --absent:#e0dece;
+  --key-bg:#dae0df;
+  --unavailable:#697779;
+  --unavailable-ink:#fffdf2;
   --tile-ink:#1e344e;
   --tile-font:"DM Sans",sans-serif;
   --radius:12px;
@@ -649,7 +831,7 @@ dialog .settings-footnote {
   .input-label {
     font-size:10px
   }
-  .entry input::placeholder {
+  .guess-placeholder {
     font-size:11px
   }
   .primary,.secondary {
@@ -658,7 +840,7 @@ dialog .settings-footnote {
   .keyboard {
     margin-top:12px
   }
-  .key {
+  .key:not(.key-command) {
     font-size:13px
   }
   .play-footer {
@@ -702,6 +884,9 @@ dialog .settings-footnote {
   }
 }
 @media(max-width:350px) {
+  .form-grid {
+    grid-template-columns:1fr;
+  }
   .key-row {
     gap:2px
   }
@@ -716,11 +901,6 @@ dialog .settings-footnote {
   }
   .puzzle-meta {
     font-size:9px
-  }
-}
-@media(hover:none) and (pointer:coarse) {
-  .composition:has(#guess-input:focus) .keyboard {
-    display:none
   }
 }
 @media(prefers-reduced-motion:reduce) {

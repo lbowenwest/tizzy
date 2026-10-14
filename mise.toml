@@ -1,0 +1,3 @@
+[env]
+# Local dev settings, e.g. DEV_ALLOWED_HOSTS for tunnel access to the Vite dev server.
+_.file = ".env"

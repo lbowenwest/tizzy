@@ -4,7 +4,7 @@
 
 [Game design](design.md) defines the agreed rules; [codebase architecture](codebase.md) defines the agreed React/TypeScript/Vite approach. The shared mobile-first layout and selectable themes have been approved in conversation and are recorded in [ui.md](ui.md). No gameplay UI should be implemented from an invented layout. First obtain the word source, establish the application and its data-loading path, then produce and approve a UI design before building the game. This is a plan, not permission to execute it.
 
-The phases below identify observable checkpoints, not estimates or one task per file. F1–F3, G1 and the shared untimed U1 presentation are implemented. The frontend pass implements G2–G4 and the untimed settings/persistence subset of G7; G5/G6 and complete timed presets remain deferred. Physical iOS/native-keyboard validation is still outstanding. Use the agreed static React app, framework-independent puzzle and round logic, ESDB source, and no backend/account/daily limit/ITV assets.
+The phases below identify observable checkpoints, not estimates or one task per file. F1–F3, U1 and G1–G7 are implemented for the approved solo practice scope, including editable ITV-inspired timing presets. Follow-up player feedback added 1–10 guesses per word and clarified preset preview versus Apply now/Save for next round, retaining round snapshots and five-guess preset defaults outside Final sprint. Further feedback made Final sprint unlimited per word, with its overall timer as the only failure limit; custom settings can also select Unlimited. Background continuation and consumed-guess timer resets were agreed in conversation and recorded in design.md. Later feedback pauses overall round time after a solve or Give up until explicit continuation, preserving the remaining budget; ordinary failures still use wall time. Physical iOS/native-keyboard validation is still outstanding. Use the agreed static React app, framework-independent puzzle and round logic, ESDB source, and no backend/account/daily limit/ITV assets.
 
 ## Foundations
 
@@ -50,9 +50,9 @@ The phases below identify observable checkpoints, not estimates or one task per 
 
 ### G3 — Configurable invalid-word outcome
 
-- **Authority/outcome:** `design.md` invalid-word policy. A dictionary-unknown submitted candidate can either be rejected without consuming a guess or fail the current word.
-- **Shape:** Add a policy field to G2's controller and its U1-approved setting control; keep candidate validity in the evaluator. Incomplete or wrong-length input remains unsubmitted. Both outcomes share the same result/next-word flow.
-- **Proof/handoff:** Vitest and Playwright demonstrate the same candidate under both policies, with no attempt cost on rejection and answer reveal on failure. Depends on G2; provides policy/failure transition to G4–G6.
+- **Authority/outcome:** `design.md` invalid-word policy. A dictionary-unknown submitted candidate can be rejected without consuming a guess, consume one unscored guess, or fail the current word.
+- **Shape:** Add a policy field to G2's controller and its U1-approved setting control; keep candidate validity in the evaluator. Incomplete or wrong-length input remains unsubmitted. Consumed unknown guesses are marked unscored on the board and do not update letter knowledge; all policies share the controller and result/next-word flow.
+- **Proof/handoff:** Vitest and Playwright demonstrate the same candidate under all three policies, with no attempt cost on rejection, an unscored attempt on consumption (including fifth-attempt loss), and answer reveal on failure. Depends on G2; provides policy/failure transition to G4–G6.
 
 ### G4 — 4→5→6 sequence and same-length retries
 
@@ -63,8 +63,8 @@ The phases below identify observable checkpoints, not estimates or one task per 
 ### G5 — Optional word clock
 
 - **Authority/outcome:** `design.md` word-clock choices. Off is the default; players can choose per-word or per-guess timing and duration. Expiry fails only the word.
-- **Shape:** Represent word deadlines in the controller; a clock integration observes them and dispatches expiry actions. Per-word time continues across guesses; per-guess time resets on an accepted guess; rejection never resets time. Expired/stale events cannot fail a later word. Use U1-approved timer controls/feedback.
-- **Proof/handoff:** Controlled-time Vitest tests cover off/word/guess modes, invalid rejection, replacement word, stale expiry and deadline continuity; Playwright covers visible-tab timing. Depends on G2–G4 and U1. **Before claiming complete mobile timer behaviour**, decide whether backgrounding pauses or continues time and test that choice; `design.md` deliberately defers it.
+- **Shape:** Represent word deadlines in the controller; a clock integration observes them and dispatches expiry actions. Per-word time continues across guesses; per-guess time resets on a spent attempt, including consumed unknown guesses; rejection never resets time. Expired/stale events cannot fail a later word. Use U1-approved timer controls/feedback.
+- **Proof/handoff:** Controlled-time Vitest tests cover off/word/guess modes, invalid rejection, replacement word, stale expiry and deadline continuity; Playwright covers visible-tab timing. Depends on G2–G4 and U1. Backgrounding continues clocks, as agreed in `design.md`; controlled browser tests cover catch-up without replaying every tick and late-action guards. Physical-device mobile suspension still needs validation.
 
 ### G6 — Optional overall sequence clock
 
@@ -76,10 +76,10 @@ The phases below identify observable checkpoints, not estimates or one task per 
 
 - **Authority/outcome:** `design.md` settings/presets and `codebase.md` localStorage. Players can load presets, edit the same settings, and retain valid custom choices on the same device.
 - **Shape:** One validated configuration shape feeds both presets and custom controls; edits mark a preset custom. Persist editable settings with safe recovery from missing/corrupt localStorage. Keep the active round snapshot unchanged until the next round. Follow U1-approved settings UI; no preset-specific puzzle/controller implementation.
-- **Proof/handoff:** Vitest checks snapshot, preset/custom transitions, malformed storage and safe defaults. Playwright tests selecting/editing/reloading settings without altering an active round. Depends on G3–G6 and U1. Preset names/durations beyond an untimed practice setup are intentionally open in `design.md`; agree them before asserting that a complete preset set is delivered.
+- **Proof/handoff:** Vitest checks snapshot, preset/custom transitions, malformed storage and safe defaults. Playwright tests selecting/editing/reloading settings without altering an active round. Depends on G3–G6 and U1. The approved preset table and timing evidence are in `design.md`; timed configurations and untimed practice share the same validated rule path.
 
 ## Integrated acceptance and coordination
 
-Once the relevant slices are complete, run Vitest, Playwright at mobile/desktop viewports, and a production Vite build. Confirm attribution is shipped, no browser request reaches a live dictionary, word rules live outside React, both invalid policies work, same-length retries and both clock scopes distinguish word from round failure, and settings survive reload. Tests belong to each slice; this is a cross-slice check, not a separate implementation task.
+Once the relevant slices are complete, run Vitest, Playwright at mobile/desktop viewports, and a production Vite build. Confirm attribution is shipped, no browser request reaches a live dictionary, word rules live outside React, all three invalid policies work, same-length retries and both clock scopes distinguish word from round failure, and settings survive reload. Tests belong to each slice; this is a cross-slice check, not a separate implementation task.
 
-**Order:** F1 and F2 can be done independently; F3 consumes both. U1 is a design/approval gate before G2 presentation. G1 can proceed from F1/F3 while U1 is reviewed. Then G2 → G3 → G4 → G5 → G6 → G7 share the controller and UI and should be integrated in dependency order. Do not use parallel implementation on overlapping React/controller surfaces. The intentionally deferred timer-background and preset-value decisions are attached to their owning slices rather than used to block F1–G4.
+**Order:** F1 and F2 can be done independently; F3 consumes both. U1 is a design/approval gate before G2 presentation. G1 can proceed from F1/F3 while U1 is reviewed. Then G2 → G3 → G4 → G5 → G6 → G7 share the controller and UI and should be integrated in dependency order. Do not use parallel implementation on overlapping React/controller surfaces. The timer-background and preset-value decisions were resolved before timed implementation; actual-device mobile testing remains a separate evidence gap.

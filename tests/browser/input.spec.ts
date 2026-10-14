@@ -1,20 +1,21 @@
 import { expect, test, type Page } from '@playwright/test';
+import { enterWord } from './entry';
 
 async function fixture(page: Page) {
   await page.route('**/words/answers/5.txt', (route) => route.fulfill({ body: 'chair\n' }));
   await page.route('**/words/5.txt', (route) => route.fulfill({ body: 'chair\ncargo\ncivic\n' }));
   await page.goto('/');
 }
-const input = (page: Page) => page.locator('#guess-input');
+const input = (page: Page) => page.getByRole('group', { name: 'Your guess', exact: true });
 async function submit(page: Page, word: string) {
-  await input(page).fill(word);
+  await enterWord(page, word);
   await input(page).press('Enter');
 }
 
-test('type or paste the entire word without skipping the clue letter', async ({ page }) => {
+test('type the entire word without skipping the clue letter', async ({ page }) => {
   await fixture(page);
-  await input(page).fill('chair');
-  await expect(input(page)).toHaveValue('CHAIR');
+  await enterWord(page, 'chair');
+  await expect(input(page)).toHaveText('CHAIR');
   const row = page.getByRole('group', { name: 'Guess 1', exact: true });
   await expect(row.getByRole('img')).toHaveCount(5);
   await expect(row.getByRole('img', { name: 'C: supplied letter; right place' })).toBeVisible();
@@ -25,9 +26,9 @@ test('type or paste the entire word without skipping the clue letter', async ({ 
 
 test('the first letter is a hint, not an undeletable input prefix', async ({ page }) => {
   await fixture(page);
-  await input(page).fill('C');
+  await enterWord(page, 'C');
   await input(page).press('Backspace');
-  await expect(input(page)).toHaveValue('');
+  await expect(input(page)).toHaveText('Tap letters below');
   await expect(page.getByRole('img', { name: 'C: supplied letter; right place' })).toBeVisible();
   await submit(page, 'SHARE');
   await expect(page.getByRole('status')).toContainText('Start with C');
@@ -55,12 +56,40 @@ for (const theme of ['letterpress', 'afterhours', 'club']) {
     await page.getByRole('button', { name: 'Close dialog' }).click();
     await expect(g).toHaveClass(/unavailable/);
     await g.click();
-    await expect(input(page)).toHaveValue('G');
+    await expect(input(page)).toHaveText('G');
     await submit(page, 'CHAIR');
     await page.getByRole('button', { name: 'Next word', exact: true }).click();
     await expect(g).not.toHaveClass(/unavailable/);
   });
 }
+
+test('unknown words can use one guess, persist the policy, and exhaust the word', async ({ page }) => {
+  await fixture(page);
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByLabel('Unknown submitted word').selectOption('consume');
+  await page.getByRole('button', { name: 'Apply now' }).click();
+  await page.reload();
+  await expect(input(page)).toBeVisible();
+  await submit(page, 'CHAI');
+  await expect(page.getByText('Guess 1 of 5')).toBeVisible();
+  await submit(page, 'CZZZZ');
+  await expect(page.getByText('Guess 2 of 5')).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Guess used');
+  const row = page.getByRole('group', { name: 'Guess 1: not in word list', exact: true });
+  await expect(row.getByRole('img', { name: 'Z: unscored; word not in list' })).toHaveCount(4);
+  await expect(page.getByRole('button', { name: 'Z', exact: true })).not.toHaveClass(/unavailable/);
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByLabel('Unknown submitted word').selectOption('fail');
+  await page.getByRole('button', { name: 'Save for next round' }).click();
+  for (let index = 1; index < 5; index++) await submit(page, 'CZZZZ');
+  await expect(page.getByRole('status')).toContainText('CHAIR');
+  await expect(page.getByText('5 of 5 guesses used')).toBeVisible();
+  await page.getByRole('button', { name: 'Next word', exact: true }).click();
+  await expect(page.getByText('Guess 1 of 5')).toBeVisible();
+  await submit(page, 'CZZZZ');
+  await expect(page.getByRole('status')).toContainText('Unknown submitted word: this word has ended');
+  await expect(page.getByText('0 of 5 guesses used')).toBeVisible();
+});
 
 test.describe('touch entry', () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
@@ -72,8 +101,9 @@ test.describe('touch entry', () => {
     await page.evaluate(async () => { await document.fonts.ready; });
     await page.screenshot({ path: testInfo.outputPath('gray-keys-mobile.png'), fullPage: true });
     for (const letter of 'CHAIR') await page.getByRole('button', { name: letter, exact: true }).tap();
-    await expect(input(page)).toHaveValue('CHAIR');
-    await expect(input(page)).not.toBeFocused();
+    await expect(input(page)).toHaveText('CHAIR');
+    expect(await input(page).evaluate((element) => element.tagName === 'DIV' && !(element as HTMLElement).isContentEditable)).toBe(true);
+    await expect(page.locator('.keyboard')).toBeVisible();
     await page.getByRole('button', { name: 'Check guess' }).tap();
     await expect(page.getByRole('status')).toContainText('Nicely found');
   });

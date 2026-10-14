@@ -7,4 +7,8 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}', 'tests/*.test.ts'],
     environment: 'node',
   },
+  server: {
+    // Opt-in tunnel hosts for device testing, e.g. DEV_ALLOWED_HOSTS=.ngrok-free.app
+    allowedHosts: process.env.DEV_ALLOWED_HOSTS?.split(',').filter(Boolean),
+  }
 });

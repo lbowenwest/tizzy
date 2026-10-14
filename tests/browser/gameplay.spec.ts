@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { enterWord } from './entry';
 
 async function wordFixtures(page: Page) {
   const fixtures: Record<number, { answer: string; guesses: string }> = {
@@ -13,7 +14,7 @@ async function wordFixtures(page: Page) {
 }
 const entry = (page: Page) => page.getByLabel('Your guess', { exact: true });
 async function guess(page: Page, value: string) {
-  await entry(page).fill(value);
+  await enterWord(page, value);
   await entry(page).press('Enter');
 }
 async function settings(page: Page) {
@@ -21,7 +22,7 @@ async function settings(page: Page) {
   return page.getByRole('dialog');
 }
 
-test('consecutive words work with physical typing and return focus to input', async ({ page }) => {
+test('consecutive words work with physical typing and return focus to the non-editable entry', async ({ page }) => {
   await wordFixtures(page);
   await page.goto('/');
   await expect(entry(page)).toBeFocused();
@@ -57,14 +58,14 @@ test('theme is live, rules wait for the next round and saved choices survive rel
   await wordFixtures(page);
   await page.goto('/');
   await guess(page, 'CARGO');
-  await entry(page).fill('CHA');
+  await enterWord(page, 'CHA');
   const dialog = await settings(page);
   await dialog.getByLabel('Appearance', { exact: true }).selectOption('club');
   await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'club');
   await dialog.getByLabel('Word length', { exact: true }).selectOption('6');
   await dialog.getByRole('button', { name: 'Save for next round' }).click();
   await expect(page.getByRole('button', { name: 'Settings', exact: true })).toBeFocused();
-  await expect(entry(page)).toHaveValue('CHA');
+  await expect(entry(page)).toHaveText('CHA');
   await expect(page.getByText('Guess 2 of 5')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Find the five.' })).toBeVisible();
   await guess(page, 'CHAIR');
@@ -79,10 +80,10 @@ test('invalid failure retries same length, solve advances, six completes the seq
   await wordFixtures(page);
   await page.goto('/');
   const dialog = await settings(page);
-  await dialog.getByLabel('Starting point').selectOption('sequence');
+  await dialog.getByLabel('Preset').selectOption('sequence');
   await dialog.getByLabel('Unknown submitted word').selectOption('fail');
-  await expect(dialog.getByLabel('Starting point')).toHaveValue('custom');
-  await dialog.getByRole('button', { name: 'Start new round now' }).click();
+  await expect(dialog.getByLabel('Preset')).toHaveValue('custom');
+  await dialog.getByRole('button', { name: 'Apply now' }).click();
   await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
   await guess(page, 'CZZZ');
   await expect(page.getByRole('status')).toContainText('CAMP');
@@ -102,10 +103,10 @@ test('a sequence preserves its rules throughout replacements and advances', asyn
   await wordFixtures(page);
   await page.goto('/');
   let dialog = await settings(page);
-  await dialog.getByLabel('Starting point').selectOption('sequence');
-  await dialog.getByRole('button', { name: 'Start new round now' }).click();
+  await dialog.getByLabel('Preset').selectOption('sequence');
+  await dialog.getByRole('button', { name: 'Apply now' }).click();
   dialog = await settings(page);
-  await dialog.getByLabel('Starting point').selectOption('practice');
+  await dialog.getByLabel('Preset').selectOption('practice');
   await dialog.getByRole('button', { name: 'Save for next round' }).click();
   for (const word of ['CAMP', 'CHAIR', 'CASTLE']) {
     await guess(page, word);
@@ -177,12 +178,12 @@ test.describe('touch presentation', () => {
     await expect(page.getByRole('img', { name: 'C: supplied letter; right place' })).toBeVisible();
     for (const letter of ['C', 'H', 'A', 'I', 'R']) await page.getByRole('button', { name: letter, exact: true }).tap();
     await page.getByRole('button', { name: 'Delete last letter' }).tap();
-    await expect(entry(page)).toHaveValue('CHAI');
+    await expect(entry(page)).toHaveText('CHAI');
     await page.getByRole('button', { name: 'R', exact: true }).tap();
     await page.getByRole('button', { name: 'Check guess' }).tap();
     await expect(page.getByRole('status')).toContainText('Nicely found');
     await page.getByRole('button', { name: 'Next word', exact: true }).tap();
-    await expect(entry(page)).toHaveValue('');
+    await expect(entry(page)).toHaveText('Tap letters below');
     await expect(entry(page)).not.toBeFocused();
     await expect(page.getByText('Guess 1 of 5')).toBeVisible();
   });
@@ -193,7 +194,7 @@ test.describe('touch presentation', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'C', exact: true }).tap();
     await page.setViewportSize({ width: 844, height: 390 });
-    await expect(entry(page)).toHaveValue('C');
+    await expect(entry(page)).toHaveText('C');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     for (const letter of ['H', 'A', 'I', 'R']) await page.getByRole('button', { name: letter, exact: true }).tap();
     await page.getByRole('button', { name: 'Check guess' }).tap();
@@ -209,7 +210,7 @@ test.describe('touch presentation', () => {
         const dialog = await settings(page);
         await dialog.getByLabel('Appearance', { exact: true }).selectOption(theme);
         await dialog.getByLabel('Word length', { exact: true }).selectOption('6');
-        await dialog.getByRole('button', { name: 'Start new round now' }).tap();
+        await dialog.getByRole('button', { name: 'Apply now' }).tap();
         await expect(page.getByRole('heading', { name: 'Find the six.' })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
         expect(await entry(page).evaluate((element) => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
@@ -221,11 +222,13 @@ test.describe('touch presentation', () => {
         await page.evaluate(async () => { await document.fonts.ready; });
         await page.screenshot({ path: testInfo.outputPath(`${theme}-${width}.png`), fullPage: true });
         await page.getByRole('button', { name: 'A', exact: true }).tap();
-        await expect(entry(page)).toHaveValue('A');
+        await expect(entry(page)).toHaveText('A');
         await entry(page).tap();
-        await expect(page.locator('.keyboard')).not.toBeVisible();
-        await entry(page).fill('CASTLE');
-        await entry(page).press('Enter');
+        await expect(page.locator('.keyboard')).toBeVisible();
+        await expect(page.locator('.play-area input, .play-area textarea, .play-area [contenteditable="true"]')).toHaveCount(0);
+        await page.getByRole('button', { name: 'Delete last letter' }).tap();
+        for (const letter of 'CASTLE') await page.getByRole('button', { name: letter, exact: true }).tap();
+        await page.getByRole('button', { name: 'Check guess' }).tap();
         await expect(page.getByRole('status')).toContainText('Nicely found');
       });
     }

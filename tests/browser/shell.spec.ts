@@ -20,7 +20,7 @@ test('the app loads answers and guesses for all three lengths', async ({ page })
     if (request.url().includes('/words/')) wordRequests.push(new URL(request.url()).pathname);
   });
   await page.goto('/');
-  await expect(page.getByRole('group', { name: 'Five-guess board', exact: true })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Guess board', exact: true })).toBeVisible();
   expect(new Set(wordRequests)).toEqual(new Set([
     '/words/4.txt', '/words/5.txt', '/words/6.txt',
     '/words/answers/4.txt', '/words/answers/5.txt', '/words/answers/6.txt',
@@ -34,9 +34,9 @@ test('loading is announced without an unplayable board', async ({ page }) => {
   await page.route('**/words/5.txt', async (route) => { await gate; await route.continue(); });
   await page.goto('/');
   await expect(page.getByRole('status')).toContainText('Loading word lists');
-  await expect(page.getByRole('group', { name: 'Five-guess board', exact: true })).not.toBeVisible();
+  await expect(page.getByRole('group', { name: 'Guess board', exact: true })).not.toBeVisible();
   release();
-  await expect(page.getByRole('group', { name: 'Five-guess board', exact: true })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Guess board', exact: true })).toBeVisible();
 });
 
 test('a missing word list gives a visible error', async ({ page }) => {
@@ -45,7 +45,7 @@ test('a missing word list gives a visible error', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('Could not load word lists');
   await page.unroute('**/words/5.txt');
   await page.getByRole('button', { name: 'Try again' }).click();
-  await expect(page.getByRole('group', { name: 'Five-guess board', exact: true })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Guess board', exact: true })).toBeVisible();
 });
 
 test('a malformed word list gives a visible error', async ({ page }) => {

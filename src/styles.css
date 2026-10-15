@@ -662,32 +662,86 @@ dialog:has(.settings-form) > :is(.dialog-heading,h2) {
 .settings-form .field {
   scroll-margin-block:12px;
 }
-.history h3 {
+.stats h3 {
   font:600 18px var(--display);
   margin:22px 0 10px
 }
-.history-empty {
-  margin:0
-}
-.history-stats {
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
-  gap:8px;
+.stats-empty {
   margin:16px 0 0
 }
-.history-stats div {
+.stats-tabs {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+  margin-bottom:8px
+}
+.stats-modes {
+  grid-template-columns:repeat(5,minmax(0,1fr))
+}
+.stats-tabs button {
+  min-height:36px;
+  padding:4px 6px;
   border:1px solid var(--line);
   border-radius:var(--radius);
   background:var(--paper);
-  padding:10px
+  font-size:13px
 }
-.history-stats dt {
+.stats-tabs button[aria-pressed="true"] {
+  background:var(--ink);
+  border-color:var(--ink);
+  color:var(--paper)
+}
+.stats-variants {
+  margin-top:12px
+}
+.stats-variants button {
+  min-height:32px;
+  background:none;
+  font-size:12px
+}
+.stats-variants button[aria-pressed="true"] {
+  background:none;
+  color:var(--ink);
+  border-width:2px;
+  font-weight:600
+}
+.stats-numbers {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  margin:16px 0 0;
+  text-align:center
+}
+.stats-numbers div {
+  display:flex;
+  flex-direction:column-reverse;
+  justify-content:flex-end
+}
+.stats-numbers dt {
   font-size:11px;
+  line-height:1.3;
   color:var(--muted)
 }
-.history-stats dd {
-  margin:4px 0 0;
-  font:600 22px var(--display)
+.stats-numbers dd {
+  margin:0 0 2px;
+  font:600 clamp(20px,6.5vw,28px) var(--display)
+}
+.stats-extra {
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px 16px;
+  margin:12px 0 0;
+  font-size:12px;
+  color:var(--muted)
+}
+.stats-extra div {
+  display:flex;
+  gap:6px
+}
+.stats-extra dd {
+  margin:0;
+  font-weight:600;
+  color:var(--ink)
 }
 .guess-distribution,.recent-words {
   list-style:none;
@@ -706,11 +760,17 @@ dialog:has(.settings-form) > :is(.dialog-heading,h2) {
   text-align:right
 }
 .distribution-bar {
-  height:12px;
+  height:14px;
   width:calc(var(--share) * 100%);
   min-width:4px;
-  background:var(--accent);
+  background:var(--line);
   border-radius:var(--radius)
+}
+.guess-distribution li[data-latest] {
+  font-weight:600
+}
+.guess-distribution li[data-latest] .distribution-bar {
+  background:var(--accent)
 }
 .recent-words li {
   display:flex;
@@ -730,10 +790,10 @@ dialog:has(.settings-form) > :is(.dialog-heading,h2) {
 .recent-words li[data-result="solved"] span:first-of-type {
   color:var(--ink)
 }
-.history-clear {
+.stats-clear {
   margin-top:20px
 }
-.history-clear > button {
+.stats-clear > button {
   width:100%
 }
 .pending-settings {
@@ -806,6 +866,9 @@ dialog:has(.settings-form) > :is(.dialog-heading,h2) {
   box-shadow:0 2px 0 #bdc5c3
 }
 @media(max-width:600px) {
+  .stats-modes {
+    grid-template-columns:repeat(3,minmax(0,1fr))
+  }
   .app {
     padding:0 max(12px,env(safe-area-inset-left)) 0 max(12px,env(safe-area-inset-right))
   }

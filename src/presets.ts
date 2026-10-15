@@ -1,40 +1,48 @@
 import { copyRules, defaultRules, normalizeRules, type Rules } from './game';
 
-/** Every round is played under one of these; history groups words by their key, so keys must stay stable. */
-export const presets: readonly { key: string; label: string; rules: Rules }[] = [
+type Preset = { key: string; mode: string; variant: string; label: string; rules: Rules };
+
+/**
+ * Every round is played under one of these; history groups words by their key, so keys must stay stable.
+ * Presets sharing a mode are its variants (Stats tabs by mode, then variant).
+ */
+export const presets: readonly Preset[] = ([
   {
-    key: 'practice-four', label: 'Practice · 4 letters',
+    key: 'practice-four', mode: 'Practice', variant: '4 letters',
     rules: { ...copyRules(defaultRules), length: 4 },
   },
   {
-    key: 'practice', label: 'Practice · 5 letters',
+    key: 'practice', mode: 'Practice', variant: '5 letters',
     rules: copyRules(defaultRules),
   },
   {
-    key: 'practice-six', label: 'Practice · 6 letters',
+    key: 'practice-six', mode: 'Practice', variant: '6 letters',
     rules: { ...copyRules(defaultRules), length: 6 },
   },
   {
-    key: 'sequence', label: 'Climb · 4 → 5 → 6',
+    key: 'sequence', mode: 'Climb', variant: '4 → 5 → 6',
     rules: { ...copyRules(defaultRules), format: 'sequence' },
   },
   {
-    key: 'quickfire-four', label: 'Quickfire · 4 letters',
+    key: 'quickfire-four', mode: 'Quickfire', variant: '4 letters',
     rules: { ...copyRules(defaultRules), length: 4, invalid: 'fail', wordClock: { mode: 'guess', seconds: 10 } },
   },
   {
-    key: 'quickfire-five', label: 'Quickfire · 5 letters',
+    key: 'quickfire-five', mode: 'Quickfire', variant: '5 letters',
     rules: { ...copyRules(defaultRules), invalid: 'fail', wordClock: { mode: 'guess', seconds: 10 } },
   },
   {
-    key: 'sprint', label: 'Sprint · 90 seconds',
+    key: 'sprint', mode: 'Sprint', variant: '90 seconds',
     rules: { ...copyRules(defaultRules), format: 'sequence', invalid: 'consume', maxGuesses: null, roundSeconds: 90 },
   },
   {
-    key: 'in-one', label: 'In one · 5 letters',
+    key: 'in-one', mode: 'In one', variant: '5 letters',
     rules: { ...copyRules(defaultRules), maxGuesses: 1, clue: true },
   },
-];
+] satisfies Omit<Preset, 'label'>[]).map((preset) => ({ ...preset, label: `${preset.mode} · ${preset.variant}` }));
+
+/** Mode names in preset order. */
+export const modes: readonly string[] = [...new Set(presets.map(({ mode }) => mode))];
 
 export function sameRules(first: Rules, second: Rules): boolean {
   const [a, b] = [normalizeRules(first), normalizeRules(second)];

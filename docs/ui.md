@@ -7,7 +7,7 @@ Records the shared layout and mobile-first direction approved in conversation be
 One compact playing screen; one **Tizzy** identity. No promotional hero, side copy, ITV or Lingo branding or separate layouts for different themes.
 
 ```text
-Tizzy                 How to play   History   Settings
+Tizzy                 How to play   Stats     Settings
 ┌───────────────────────────────────────────────────┐
 │ SINGLE WORD / 4 → 5 → 6                   Untimed │
 │ Find the five.                                    │
@@ -75,9 +75,30 @@ Game settings are saved separately from the active round snapshot:
 
 Help explains whole-word entry, duplicates, feedback, invalid-word outcomes, sequence retries and clocks. Each preset fixes its guess limit: five, except Sprint (Unlimited) and In one (one try). Unlimited counters show the current guess number without a fictitious maximum. The active board, counters, help and result use the snapshotted limit.
 
-### History
+### Stats
 
-A **History** header button opens a native modal dialog with the same heading, close control and Escape behaviour as Settings and Help. It opens on the saved preset's group, with a labelled selector for other recorded groups. Statistics are text first: words played, solved percentage, guess distribution as labelled rows with bars as reinforcement only, current and best streak, and average solve time in minutes:seconds; sequence groups add rounds completed and rounds whose time ran out. Below them, the 50 most recent words are listed newest first with answer, result, guesses used and group. An empty group or history shows **No finished words yet.** **Clear history** is a two-step control inside the dialog (Clear history, then Confirm clear or Cancel) rather than a browser confirm. Blocked or corrupt history storage shows the empty state and never prevents play. The three header buttons must fit a 320px viewport without horizontal overflow.
+A **Stats** header button opens a native modal dialog (**Your stats.**) with the same heading, close control and Escape behaviour as Settings and Help. A row of mode buttons (Practice, Climb, Quickfire, Sprint, In one; pressed state shown by `aria-pressed`) sits above a lighter row of variant buttons for modes with more than one preset (4 / 5 / 6 letters). It opens on the saved preset; choosing a mode selects the saved preset if it belongs to that mode, else the variant played most recently, else the first. Mode buttons are five across on wider screens and a three-column grid on phones.
+
+```text
+[Practice] [Climb] [Quickfire]
+[Sprint  ] [In one]
+( 4 letters )( 5 letters )( 6 letters )
+
+  10      90%       1         8
+Played  Solved  Current   Best streak
+                streak
+Average solve 0:23
+
+Guess distribution
+1 ▏                 0
+2 ███               1
+3 ██████            2
+4 ████████████████  5   ← latest result highlighted
+5 ███               1
+✗ ███               1
+```
+
+Statistics are text first: four headline numbers (played, solved percentage, current and best streak), then smaller figures for average solve time in minutes:seconds and, for sequence presets, rounds completed and rounds whose time ran out. The guess distribution has a labelled row for every guess count up to the preset's limit plus **✗** for words not solved (accessible names such as "3 guesses: 2 words", "Not solved: 1 word"); bars are reinforcement only, and the row holding the most recent result is emphasised. Below it, the selected variant's ten most recent words are listed newest first with answer, result and guesses used. No history at all shows **No finished words yet.**; an unplayed variant shows **Not played yet.** **Clear stats** is a two-step control inside the dialog (Clear stats, then Confirm clear or Cancel) rather than a browser confirm. Blocked or corrupt history storage shows the empty state and never prevents play. The three header buttons must fit a 320px viewport without horizontal overflow.
 
 ### Clue puzzles
 
@@ -128,6 +149,6 @@ Playwright covers real tap events in touch-emulated Chromium, rather than only r
 
 ## Current implementation boundary
 
-The React frontend implements untimed/timed single-word and sequence play, all three invalid-word policies, independent clock scopes, the three themes, presets, local persistence and device-local History. It also implements In one clue puzzles. See [design.md](design.md#presets-and-background-behaviour) for the preset table, TV timing evidence and solo adaptation boundaries. Preferences store the chosen preset. Rules saved before presets-only restore as the preset they match, otherwise Practice · 5 letters.
+The React frontend implements untimed/timed single-word and sequence play, all three invalid-word policies, independent clock scopes, the three themes, presets, local persistence and device-local Stats. It also implements In one clue puzzles. See [design.md](design.md#presets-and-background-behaviour) for the preset table, TV timing evidence and solo adaptation boundaries. Preferences store the chosen preset. Rules saved before presets-only restore as the preset they match, otherwise Practice · 5 letters.
 
 The isolated prototype's frozen clocks remain visual examples, not the production timing implementation. Physical-device Safari/native-keyboard testing remains outstanding; controlled-time Chromium tests cover background catch-up and expiry guards.

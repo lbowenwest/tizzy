@@ -1,5 +1,5 @@
 import type { Round, Rules, WordLength } from './game';
-import { getPresetKey, isPresetKey } from './presets';
+import { getPresetKey, isPresetKey, presetRules } from './presets';
 
 type FailureReason = NonNullable<Round['reason']>;
 export type HistoryRecord = {
@@ -19,7 +19,7 @@ export type HistoryRecord = {
 export type GroupSummary = {
   played: number;
   solved: number;
-  guessDistribution: { guesses: number; count: number }[];
+  guessDistribution: { guesses: number; count: number }[]; // Solved words, every row from 1 to the guess limit.
   currentStreak: number;
   bestStreak: number;
   averageSolveMs: number | null;
@@ -86,8 +86,11 @@ export function summarizeHistory(records: readonly HistoryRecord[]): Map<string,
   }
   return new Map([...groups].map(([group, entries]) => {
     const solved = entries.filter(({ result }) => result === 'solved');
-    const distribution = new Map<number, number>();
-    for (const { guesses } of solved) distribution.set(guesses, (distribution.get(guesses) ?? 0) + 1);
+    // Unlimited presets show at least five rows, extended to the longest solve.
+    const limit = presetRules(group).maxGuesses ?? Math.max(5, ...solved.map(({ guesses }) => guesses));
+    const guessDistribution = Array.from({ length: limit }, (_, index) => ({
+      guesses: index + 1, count: solved.filter(({ guesses }) => guesses === index + 1).length,
+    }));
     let currentStreak = 0;
     let bestStreak = 0;
     for (const { result } of entries) {
@@ -100,7 +103,7 @@ export function summarizeHistory(records: readonly HistoryRecord[]): Map<string,
     return [group, {
       played: entries.length,
       solved: solved.length,
-      guessDistribution: [...distribution].sort(([a], [b]) => a - b).map(([guesses, total]) => ({ guesses, count: total })),
+      guessDistribution,
       currentStreak,
       bestStreak,
       averageSolveMs: solved.length ? solved.reduce((total, { durationMs }) => total + durationMs, 0) / solved.length : null,

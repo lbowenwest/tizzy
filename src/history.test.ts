@@ -75,11 +75,18 @@ describe('history summary', () => {
       make(5, { group: 'quickfire-five', result: 'failed', reason: 'invalid', guesses: 0 }),
     ]);
     expect(summary.get('practice')).toEqual({
-      played: 4, solved: 3, guessDistribution: [{ guesses: 2, count: 1 }, { guesses: 3, count: 2 }],
+      played: 4, solved: 3, guessDistribution: [1, 2, 3, 4, 5].map((guesses) => ({ guesses, count: [0, 1, 2, 0, 0][guesses - 1] })),
       currentStreak: 2, bestStreak: 2, averageSolveMs: 2000, rounds: null,
     });
     expect(summary.get('quickfire-five')).toMatchObject({ played: 1, solved: 0, currentStreak: 0, bestStreak: 0, averageSolveMs: null });
     expect(summarizeHistory([]).size).toBe(0);
+  });
+  it('sizes the guess distribution from the preset limit, extending Unlimited to the longest solve', () => {
+    const rows = (group: string, guesses: number[]) => summarizeHistory(guesses.map((count, index) => make(index + 1, { group, guesses: count })))
+      .get(group)!.guessDistribution.map(({ guesses }) => guesses);
+    expect(rows('in-one', [1])).toEqual([1]);
+    expect(rows('sprint', [2])).toEqual([1, 2, 3, 4, 5]);
+    expect(rows('sprint', [2, 8])).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
   });
   it('keeps the best streak after a failure resets the current one', () => {
     const results = ['solved', 'solved', 'solved', 'failed', 'solved'] as const;

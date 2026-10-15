@@ -46,11 +46,13 @@ test('In one starts from the clue with one row, no first letter and one try', as
   await guess(page, 'CHAIR');
   await expect(page.getByRole('status')).toContainText('Nicely found');
   await expect(clue).toBeVisible();
-  await page.getByRole('button', { name: 'History', exact: true }).click();
-  const history = page.getByRole('dialog', { name: 'Your history.' });
-  await expect(history.getByLabel('Group')).toHaveValue('in-one');
-  await expect(history.getByRole('list', { name: 'Recent words' }).getByRole('listitem').first())
-    .toHaveText(/CHAIR.*Solved.*1 guess.*In one/);
+  await page.getByRole('button', { name: 'Stats', exact: true }).click();
+  const stats = page.getByRole('dialog', { name: 'Your stats.' });
+  await expect(stats.getByRole('group', { name: 'Mode' }).getByRole('button', { name: 'In one' })).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => stats.getByRole('list', { name: 'Guess distribution' }).getByRole('listitem')
+    .evaluateAll((items) => items.map((item) => item.getAttribute('aria-label')))).toEqual(['1 guess: 1 word', 'Not solved: 0 words']);
+  await expect(stats.getByRole('list', { name: 'Recent words' }).getByRole('listitem').first())
+    .toHaveText(/CHAIR.*Solved.*1 guess/);
 });
 
 test('a rejected try ends In one with its reason and the answer', async ({ page }) => {

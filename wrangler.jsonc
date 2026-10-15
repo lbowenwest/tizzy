@@ -4,5 +4,7 @@
   "compatibility_date": "2026-10-15",
   "assets": {
     "directory": "./dist"
-  }
+  },
+  // Cloudflare creates the DNS record and certificate for this hostname on deploy.
+  "routes": [{ "pattern": "tizzy.tweakyllama.uk", "custom_domain": true }]
 }

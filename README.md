@@ -11,4 +11,4 @@ UI studies are available at `/prototypes/index.html` on the dev server: [prototy
 - `npx playwright install chromium` — install the browser used by Playwright (once per machine).
 - `npm run test:e2e` — build and test gameplay, settings, controlled-time expiry/background recovery, loading failures, prototypes and narrow touch layouts in both development and production preview.
 - `npm run words:build` — regenerate the answer, guess and clue lists from the pinned ESDB snapshots.
-- `npm run deploy` — build and upload `dist/` to the `tizzy` Cloudflare Worker as static assets (`wrangler.jsonc`). Wrangler comes from `mise install` (pinned in `mise.toml`); run `wrangler login` once first.
+- `npm run deploy` — build and upload `dist/` to the `tizzy` Cloudflare Worker as static assets, served at https://tizzy.tweakyllama.uk (`wrangler.jsonc`). Wrangler comes from `mise install` (pinned in `mise.toml`); run `wrangler login` once first.

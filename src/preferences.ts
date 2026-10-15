@@ -20,13 +20,14 @@ export function parsePreferences(raw: string | null): Preferences {
     const wordClock = value.rules.wordClock === undefined ? defaults.rules.wordClock : value.rules.wordClock;
     const roundSeconds = value.rules.roundSeconds === undefined ? null : value.rules.roundSeconds;
     const maxGuesses = value.rules.maxGuesses === undefined ? defaultRules.maxGuesses : value.rules.maxGuesses;
+    const clue = value.rules.clue === undefined ? defaultRules.clue : value.rules.clue;
     if (!wordClock || !['off', 'word', 'guess'].includes(wordClock.mode) || !validSeconds(wordClock.seconds)
-      || (roundSeconds !== null && !validSeconds(roundSeconds)) || (maxGuesses !== null && !guessOptions.includes(maxGuesses))) return fallback();
+      || (roundSeconds !== null && !validSeconds(roundSeconds)) || (maxGuesses !== null && !guessOptions.includes(maxGuesses)) || typeof clue !== 'boolean') return fallback();
     return {
       theme: value.theme,
       rules: {
         format: value.rules.format, length: value.rules.length, invalid: value.rules.invalid, maxGuesses,
-        wordClock: { mode: wordClock.mode, seconds: wordClock.seconds }, roundSeconds,
+        wordClock: { mode: wordClock.mode, seconds: wordClock.seconds }, roundSeconds, clue,
       },
     };
   } catch {

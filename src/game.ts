@@ -8,10 +8,11 @@ export type Rules = {
   maxGuesses: number | null; // null means no guess limit.
   wordClock: { mode: 'off' | 'word' | 'guess'; seconds: number };
   roundSeconds: number | null;
+  clue: boolean; // Single words only: start from a clue only the answer fits, with no first letter.
 };
 export const defaultRules: Rules = {
   format: 'single', length: 5, invalid: 'reject', maxGuesses: 5,
-  wordClock: { mode: 'off', seconds: 10 }, roundSeconds: null,
+  wordClock: { mode: 'off', seconds: 10 }, roundSeconds: null, clue: false,
 };
 export function copyRules(rules: Rules): Rules {
   return { ...rules, wordClock: { ...rules.wordClock } };
@@ -24,14 +25,19 @@ export function normalizeRules(rules: Rules): Rules {
     length: sequence ? defaultRules.length : rules.length,
     wordClock: rules.wordClock.mode === 'off' ? { ...defaultRules.wordClock } : { ...rules.wordClock },
     roundSeconds: sequence ? rules.roundSeconds : null,
+    clue: !sequence && rules.clue,
   };
 }
 export type LetterFeedback = 'correct' | 'present' | 'absent';
-export type Guess = { word: string; feedback: LetterFeedback[] | null };
+/** Null feedback is unscored: an unknown word, or (with a rejection reason) a known word that breaks the clue. */
+export type Guess = { word: string; feedback: LetterFeedback[] | null; rejection?: string };
+/** A checked word with letter feedback, such as a clue puzzle's given clue. */
+export type ScoredGuess = { word: string; feedback: LetterFeedback[] };
 export type Round = {
   answer: string;
   length: WordLength;
   rules: Rules;
+  clue: ScoredGuess | null;
   guesses: Guess[];
   status: 'playing' | 'won' | 'lost' | 'expired';
   reason?: 'attempts' | 'invalid' | 'word-time' | 'round-time' | 'given-up';
@@ -79,29 +85,96 @@ export function keyboardFeedback(guesses: readonly Guess[]): Map<string, LetterF
   return knowledge;
 }
 
+const ordinals = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
+const counts = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
+const letterCount = (count: number, letter: string) => `${counts[count]} ${letter}${count === 1 ? '' : 's'}`;
+
+/**
+ * The first way a word breaks a checked clue, or null when the word would give the clue's feedback.
+ * Right-place letters are checked first, then letters shown elsewhere, then letters shown absent.
+ */
+export function explainContradiction(clue: ScoredGuess, word: string): string | null {
+  const { feedback } = clue;
+  const letters = [...clue.word];
+  const shown = (letter: string) => letters.filter((other, index) => other === letter && feedback[index] !== 'absent').length;
+  const inWord = (letter: string) => [...word].filter((other) => other === letter).length;
+  for (const [index, letter] of letters.entries()) {
+    if (feedback[index] === 'correct' && word[index] !== letter) return `${ordinals[index]} letter must be ${letter.toUpperCase()}.`;
+  }
+  for (const [index, letter] of letters.entries()) {
+    if (feedback[index] !== 'present') continue;
+    const needed = shown(letter);
+    if (word[index] === letter || (needed === 1 && inWord(letter) === 0)) return `${letter.toUpperCase()} must appear, but not ${ordinals[index]}.`;
+    if (inWord(letter) < needed) return `The word needs at least ${letterCount(needed, letter.toUpperCase())}.`;
+  }
+  for (const [index, letter] of letters.entries()) {
+    if (feedback[index] !== 'absent') continue;
+    const allowed = shown(letter);
+    if (allowed === 0 && inWord(letter) > 0) return `${letter.toUpperCase()} isn't in the word.`;
+    if (inWord(letter) > allowed) return `The word has only ${letterCount(allowed, letter.toUpperCase())}.`;
+    if (word[index] === letter) return `${letter.toUpperCase()} can't be ${ordinals[index]}.`;
+  }
+  return null;
+}
+
 type Evaluation = { valid: true; word: string; feedback: LetterFeedback[] }
   | { valid: false; reason: 'shape' | 'first-letter'; message: string }
   | { valid: false; reason: 'unknown'; word: string; message: string };
 
-export function evaluateCandidate(answer: string, input: string, allowed: ReadonlySet<string>): Evaluation {
+export function evaluateCandidate(answer: string, input: string, allowed: ReadonlySet<string>, firstLetter = true): Evaluation {
   const word = input.toLowerCase();
   if (!new RegExp(`^[a-z]{${answer.length}}$`).test(word)) {
     return { valid: false, reason: 'shape', message: `Enter all ${answer.length} letters before checking.` };
   }
-  if (word[0] !== answer[0]) return { valid: false, reason: 'first-letter', message: `Start with ${answer[0].toUpperCase()}.` };
+  if (firstLetter && word[0] !== answer[0]) return { valid: false, reason: 'first-letter', message: `Start with ${answer[0].toUpperCase()}.` };
   if (!allowed.has(word)) return { valid: false, reason: 'unknown', word, message: 'Not in the word list. Try another word; no guess used.' };
   return { valid: true, word, feedback: evaluateGuess(answer, word) };
 }
 
+const avoiding = <T>(pool: readonly T[], repeats: (item: T) => boolean) => {
+  const alternatives = pool.filter((item) => !repeats(item));
+  return alternatives.length ? alternatives : pool;
+};
+
+/** Whether the answer is the only accepted word giving this clue's feedback. */
+function onlyAnswerFits(answer: string, clue: ScoredGuess, accepted: readonly string[]): boolean {
+  const key = clue.feedback.join();
+  const fitting = accepted.filter((word) => evaluateGuess(word, clue.word).join() === key);
+  return fitting.length === 1 && fitting[0] === answer;
+}
+
+/**
+ * Pick a clue puzzle, starting from a random entry and clue. Every clue is re-checked against the
+ * loaded guesses, so a clue another accepted word fits is never used, whatever data was loaded.
+ */
+function pickClue(data: WordData, length: WordLength, previous: string | undefined, random: () => number): { answer: string; clue: ScoredGuess } {
+  const entries = avoiding(data.clues[length], ({ answer }) => answer === previous);
+  const start = Math.floor(random() * entries.length);
+  const offset = random();
+  for (let step = 0; step < entries.length; step++) {
+    const { answer, clues } = entries[(start + step) % entries.length];
+    for (let index = 0; index < clues.length; index++) {
+      const word = clues[(Math.floor(offset * clues.length) + index) % clues.length];
+      const clue = { word, feedback: evaluateGuess(answer, word) };
+      if (onlyAnswerFits(answer, clue, data.guesses[length])) return { answer, clue };
+    }
+  }
+  throw new Error('No clue puzzles available');
+}
+
 function newWord(data: WordData, rules: Rules, length: WordLength, now: number,
   roundDeadline: number | null, roundStartedAt: number, previous?: string, random = Math.random): Round {
-  const pool = data.answers[length];
-  const alternatives = pool.filter((answer) => answer !== previous);
-  const candidates = alternatives.length ? alternatives : pool;
-  if (!candidates.length) throw new Error('No answers available');
-  const answer = candidates[Math.floor(random() * candidates.length)];
+  let answer: string;
+  let clue: ScoredGuess | null = null;
+  if (normalizeRules(rules).clue) {
+    ({ answer, clue } = pickClue(data, length, previous, random));
+  } else {
+    const candidates = avoiding(data.answers[length], (candidate) => candidate === previous);
+    if (!candidates.length) throw new Error('No answers available');
+    answer = candidates[Math.floor(random() * candidates.length)];
+  }
   return {
-    answer, length, rules: copyRules(rules), guesses: [], status: 'playing',
+    answer, length, rules: copyRules(rules), clue, guesses: [], status: 'playing',
     wordDeadline: rules.wordClock.mode === 'off' ? null : now + rules.wordClock.seconds * 1000,
     roundDeadline, startedAt: now, roundStartedAt, endedAt: null,
   };
@@ -156,14 +229,20 @@ export function nextWord(round: Round, data: WordData, nextRules: Rules, random 
 export function submitGuess(round: Round, input: string, allowed: ReadonlySet<string>, now = Date.now()): { round: Round; message: string } {
   const checked = advanceClock(round, now);
   if (checked !== round || round.status !== 'playing') return { round: checked, message: '' };
-  const evaluation = evaluateCandidate(round.answer, input, allowed);
+  const evaluation = evaluateCandidate(round.answer, input, allowed, round.clue === null);
   let guess: Guess;
+  let rejection: string | null = null;
   if (!evaluation.valid) {
     if (evaluation.reason !== 'unknown' || round.rules.invalid === 'reject') return { round, message: evaluation.message };
     if (round.rules.invalid === 'fail') {
       return { round: { ...round, status: 'lost', reason: 'invalid', endedAt: now }, message: 'That word is not in the list, so this word has ended.' };
     }
     guess = { word: evaluation.word, feedback: null };
+  } else if (round.clue && evaluation.word !== round.answer) {
+    rejection = explainContradiction(round.clue, evaluation.word);
+    // Clue selection guarantees only the answer fits; reaching this means that check was bypassed.
+    if (rejection === null) throw new Error(`Clue ${round.clue.word} also fits ${evaluation.word}`);
+    guess = { word: evaluation.word, feedback: null, rejection };
   } else {
     guess = { word: evaluation.word, feedback: evaluation.feedback };
   }
@@ -178,7 +257,8 @@ export function submitGuess(round: Round, input: string, allowed: ReadonlySet<st
       wordDeadline: status === 'playing' && round.rules.wordClock.mode === 'guess'
         ? now + round.rules.wordClock.seconds * 1000 : round.wordDeadline,
     },
-    message: !evaluation.valid ? round.rules.maxGuesses === null
+    message: rejection !== null ? `Rejected: ${evaluation.word.toUpperCase()} doesn't fit. ${rejection}`
+      : !evaluation.valid ? round.rules.maxGuesses === null
       ? 'Not in the word list. No letter clues awarded.' : 'Not in the word list. Guess used; no letter clues awarded.'
       : status === 'playing' ? 'Guess checked. Follow the letter clues.' : '',
   };

@@ -21,13 +21,17 @@ export const presets: readonly { key: string; label: string; rules: Rules }[] = 
     key: 'final', label: 'Final sprint · 90 seconds',
     rules: { ...copyRules(defaultRules), format: 'sequence', invalid: 'consume', maxGuesses: null, roundSeconds: 90 },
   },
+  {
+    key: 'in-one', label: 'In one · 5 letters',
+    rules: { ...copyRules(defaultRules), maxGuesses: 3, clue: true },
+  },
 ];
 
 export function sameRules(first: Rules, second: Rules): boolean {
   const [a, b] = [normalizeRules(first), normalizeRules(second)];
   return a.format === b.format && a.length === b.length && a.invalid === b.invalid && a.maxGuesses === b.maxGuesses
     && a.wordClock.mode === b.wordClock.mode && a.wordClock.seconds === b.wordClock.seconds
-    && a.roundSeconds === b.roundSeconds;
+    && a.roundSeconds === b.roundSeconds && a.clue === b.clue;
 }
 
 export function getPresetKey(rules: Rules): string {
@@ -37,6 +41,7 @@ export function getPresetKey(rules: Rules): string {
 export function describeRules(rules: Rules): string {
   const parts = [
     rules.format === 'sequence' ? '4 → 5 → 6 sequence' : `${rules.length} letters`,
+    ...(normalizeRules(rules).clue ? ['Starts with a clue only the answer fits; no first letter'] : []),
     rules.maxGuesses === null ? 'Unlimited guesses per word' : `${rules.maxGuesses} ${rules.maxGuesses === 1 ? 'guess' : 'guesses'} per word`,
   ];
   if (rules.wordClock.mode !== 'off') parts.push(`${rules.wordClock.seconds} seconds per ${rules.wordClock.mode}`);

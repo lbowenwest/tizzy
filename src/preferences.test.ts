@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaults, parsePreferences } from './preferences';
 import { copyRules, defaultRules } from './game';
-import { getPresetKey, presets } from './presets';
+import { describeRules, getPresetKey, presets } from './presets';
 
 describe('preferences', () => {
   it('preserves every supported guess count', () => {
@@ -19,6 +19,13 @@ describe('preferences', () => {
       expect(parsePreferences(JSON.stringify({ theme: 'club', rules: { ...copyRules(defaultRules), maxGuesses } }))).toEqual(defaults);
     }
   });
+  it('keeps a saved clue choice and rejects a malformed one', () => {
+    const value = { theme: 'club', rules: { ...copyRules(defaultRules), clue: true } };
+    expect(parsePreferences(JSON.stringify(value))).toEqual(value);
+    for (const clue of ['yes', 1, null]) {
+      expect(parsePreferences(JSON.stringify({ theme: 'club', rules: { ...copyRules(defaultRules), clue } }))).toEqual(defaults);
+    }
+  });
   it('recovers from missing, corrupt and invalid storage', () => {
     for (const input of [null, '{', 'true', '{}', '{"theme":"unknown","rules":{}}', '{"theme":"club","rules":{"length":99}}']) {
       expect(parsePreferences(input)).toEqual(defaults);
@@ -34,7 +41,7 @@ describe('preferences', () => {
     const legacy = { theme: 'afterhours', rules: { format: 'sequence', length: 6, invalid: 'consume',
       wordClock: { mode: 'guess', seconds: 12 }, roundSeconds: 90 } };
     expect(parsePreferences(JSON.stringify(legacy))).toEqual({ theme: 'afterhours',
-      rules: { ...legacy.rules, maxGuesses: 5 } });
+      rules: { ...legacy.rules, maxGuesses: 5, clue: false } });
   });
   it('restores supported choices without accepting arbitrary fields', () => {
     expect(parsePreferences(JSON.stringify({ theme: 'club', rules: { format: 'sequence', length: 6, invalid: 'fail', timer: true } })))
@@ -68,7 +75,14 @@ describe('presets', () => {
     expect(presets.find(({ key }) => key === 'final')!.rules).toMatchObject({
       maxGuesses: null, roundSeconds: 90, wordClock: { mode: 'off' }, invalid: 'consume',
     });
-    for (const preset of presets.filter(({ key }) => key !== 'final')) expect(preset.rules.maxGuesses).toBe(5);
+    for (const preset of presets.filter(({ key }) => key !== 'final' && key !== 'in-one')) {
+      expect(preset.rules).toMatchObject({ maxGuesses: 5, clue: false });
+    }
+  });
+  it('makes In one an untimed five-letter clue puzzle with three tries', () => {
+    const inOne = presets.find(({ key }) => key === 'in-one')!;
+    expect(inOne.rules).toEqual({ ...defaultRules, maxGuesses: 3, clue: true });
+    expect(describeRules(inOne.rules)).toBe('5 letters · Starts with a clue only the answer fits; no first letter · 3 guesses per word · Untimed · Unknown words are free to reject');
   });
   it('shares the ordinary editable configuration path and round-trips through storage', () => {
     for (const preset of presets) {
@@ -94,5 +108,8 @@ describe('presets', () => {
     expect(getPresetKey({ ...rulesFor('practice'), roundSeconds: 90 })).toBe('practice');
     expect(getPresetKey({ ...rulesFor('practice'), length: 4 })).toBe('custom');
     expect(getPresetKey({ ...rulesFor('sequence'), roundSeconds: 90 })).toBe('custom');
+    expect(getPresetKey({ ...rulesFor('sequence'), clue: true })).toBe('sequence');
+    expect(describeRules({ ...rulesFor('sequence'), clue: true })).toBe(describeRules(rulesFor('sequence')));
+    expect(getPresetKey({ ...rulesFor('practice'), clue: true })).toBe('custom');
   });
 });

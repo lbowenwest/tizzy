@@ -37,7 +37,7 @@ export function toRecord(round: Round): HistoryRecord | null {
     id: `${round.startedAt}:${round.answer}`, roundId: round.roundStartedAt, answer: round.answer,
     length: round.length, format: round.rules.format, group: getPresetKey(round.rules),
     result: round.status === 'won' ? 'solved' : 'failed', reason: round.status === 'won' ? null : round.reason ?? null,
-    guesses: round.guesses.length, unknown: round.guesses.filter(({ feedback }) => feedback === null).length,
+    guesses: round.guesses.length, unknown: round.guesses.filter(({ feedback, rejection }) => feedback === null && rejection === undefined).length,
     durationMs: round.endedAt - round.startedAt, endedAt: round.endedAt,
   };
 }

@@ -4,7 +4,7 @@
 
 [Game design](design.md) defines the agreed rules; [codebase architecture](codebase.md) defines the agreed React/TypeScript/Vite approach. The shared mobile-first layout and selectable themes have been approved in conversation and are recorded in [ui.md](ui.md). No gameplay UI should be implemented from an invented layout. First obtain the word source, establish the application and its data-loading path, then produce and approve a UI design before building the game. This is a plan, not permission to execute it.
 
-The phases below identify observable checkpoints, not estimates or one task per file. F1–F3, U1 and G1–G7 are implemented for the approved solo practice scope, including editable ITV-inspired timing presets. Follow-up player feedback added 1–10 guesses per word and clarified preset preview versus Apply now/Save for next round, retaining round snapshots and five-guess preset defaults outside Final sprint. Further feedback made Final sprint unlimited per word, with its overall timer as the only failure limit; custom settings can also select Unlimited. Background continuation and consumed-guess timer resets were agreed in conversation and recorded in design.md. Later feedback pauses overall round time after a solve or Give up until explicit continuation, preserving the remaining budget; ordinary failures still use wall time. Physical iOS/native-keyboard validation is still outstanding. Device-local attempt history was approved in conversation on 2026-10-14, recorded in design.md, ui.md and codebase.md, and implemented as H1–H2 below. In one clue puzzles were approved in conversation on 2026-10-15, recorded in design.md, ui.md, codebase.md and wordlist.md, and planned as C1–C3 below; C1 is implemented, C2–C3 are not. Use the agreed static React app, framework-independent puzzle and round logic, ESDB source, and no backend/account/daily limit/ITV assets.
+The phases below identify observable checkpoints, not estimates or one task per file. F1–F3, U1 and G1–G7 are implemented for the approved solo practice scope, including editable ITV-inspired timing presets. Follow-up player feedback added 1–10 guesses per word and clarified preset preview versus Apply now/Save for next round, retaining round snapshots and five-guess preset defaults outside Final sprint. Further feedback made Final sprint unlimited per word, with its overall timer as the only failure limit; custom settings can also select Unlimited. Background continuation and consumed-guess timer resets were agreed in conversation and recorded in design.md. Later feedback pauses overall round time after a solve or Give up until explicit continuation, preserving the remaining budget; ordinary failures still use wall time. Physical iOS/native-keyboard validation is still outstanding. Device-local attempt history was approved in conversation on 2026-10-14, recorded in design.md, ui.md and codebase.md, and implemented as H1–H2 below. In one clue puzzles were approved in conversation on 2026-10-15, recorded in design.md, ui.md, codebase.md and wordlist.md, and planned as C1–C3 below; C1–C2 are implemented, C3 is not. Use the agreed static React app, framework-independent puzzle and round logic, ESDB source, and no backend/account/daily limit/ITV assets.
 
 ## Foundations
 
@@ -158,7 +158,7 @@ Play ──▶ clue row above the board · rejected rows + reason · keyboardFee
 - **Dependencies/output:** none. Produces `WordData.clues` for C2.
 - **Validation:** `npm run words:build` twice with an empty `git diff` the second time; `npm test`; `npm run build`; `npx playwright test tests/browser/shell.spec.ts`.
 
-### C2 — Play clue rounds in the controller
+### C2 — Play clue rounds in the controller (implemented)
 
 - **Authority/outcome:** `design.md` In one clue puzzles and preset table. With `clue` on, a single word starts from a stored clue, accepts any first letter, wins on the answer, and rejects any other known word with its reason at the cost of a try. The rule persists and the In one preset exists.
 - **Shape:**
@@ -189,6 +189,7 @@ Play ──▶ clue row above the board · rejected rows + reason · keyboardFee
 - **Evidence anchors:** `src/game.ts` (`Rules`, `Guess`, `Round`, `newWord`, `evaluateCandidate`, `submitGuess`, `normalizeRules`); `src/presets.ts`; `src/preferences.ts` and its tests; `src/history.ts` `toRecord`; `src/game.test.ts`, `src/clocks.test.ts` and `src/history.test.ts` fixtures.
 - **Dependencies/output:** consumes C1's `WordData.clues`. Produces `Rules.clue`, `Round.clue`, `Guess.rejection`, `explainContradiction` and the `in-one` preset for C3.
 - **Validation:** `npm test` and `tsc --noEmit`.
+- **As implemented:** the clue is typed `ScoredGuess` (a `Guess` whose feedback is never null). `src/clues.test.ts` covers the controller cases above with a hand-made fixture, and checks the property by comparing 60 sampled clues per length with every accepted word. A rejection's message is `Rejected: WORD doesn't fit. <reason>`.
 
 ### C3 — Present clue puzzles
 

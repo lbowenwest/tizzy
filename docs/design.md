@@ -8,7 +8,7 @@ Build an original-branded, responsive English word game for unlimited practice o
 
 ## Play and configuration
 
-A word puzzle supplies the first letter. Players submit guesses of the word's length and receive feedback for letters in the right position and letters elsewhere in the answer. Letter feedback must handle duplicates consistently. The Lingo-style default is five attempts, with an editable limit of 1–10 guesses per word or Unlimited. The final sprint defaults to Unlimited: its overall clock, not attempt exhaustion, limits play.
+A word puzzle supplies the first letter, except in [In one clue puzzles](#in-one-clue-puzzles). Players submit guesses of the word's length and receive feedback for letters in the right position and letters elsewhere in the answer. Letter feedback must handle duplicates consistently. The Lingo-style default is five attempts, with an editable limit of 1–10 guesses per word or Unlimited. The final sprint defaults to Unlimited: its overall clock, not attempt exhaustion, limits play.
 
 Players can edit the relevant rules and load presets. Presets are ordinary configurations, not distinct puzzle implementations. Editing a preset produces a custom configuration. Clocks are **off by default**. Selecting a preset only loads a preview of its format, guess count, clocks and unknown-word policy. **Apply now** replaces the current round with that preview; **Save for next round** keeps current play unchanged and shows a pending-settings notice. Closing without either action discards the rule draft. Timed presets enable their clocks when applied; the same counts, durations and policies remain editable.
 
@@ -19,6 +19,7 @@ Players can edit the relevant rules and load presets. Presets are ordinary confi
 | Invalid-word policy | Reject submission, use a guess, fail word | Rejection does not consume a guess or reset a clock. Use-a-guess records an unscored attempt without letter clues; with a finite limit, the final allowed attempt fails the word. Under Unlimited, unknown words remain recorded and unscored without ending the word. Fail-word ends the current word immediately. |
 | Overall multi-word round clock | Off, on with configurable duration | Its expiry ends the whole multi-word round, unlike a word-clock expiry. |
 | Format | Single word, 4→5→6 sequence | Single-word play can continue with another word indefinitely. The sequence advances to the next length only after a solve. |
+| Start with a clue | Off (default), on; single words only | Each word starts from one given clue that only the answer fits, with no first letter supplied. A sequence ignores the setting. See [In one clue puzzles](#in-one-clue-puzzles). |
 
 A guess that cannot form a candidate at all (for example, incomplete or the wrong length) is not a submitted word. The invalid-word policy applies to a submitted candidate that is not in the accepted word list. An unscored attempt must not change keyboard letter knowledge. Random answers exclude plural-only nouns; those words remain valid guesses. Verbs ending in s and words with an eligible non-plural sense remain possible answers, using the pinned ESDB word-form metadata described in [wordlist.md](wordlist.md). The supplied first letter remains fixed.
 
@@ -49,12 +50,24 @@ The owner approved ITV-inspired timed presets alongside untimed practice:
 | ITV-style · 4 letters | Single, 4 letters | 5 | Fail word | Per guess, 10 seconds | Off |
 | ITV-style · 5 letters | Single, 5 letters | 5 | Fail word | Per guess, 10 seconds | Off |
 | Final sprint · 90 seconds | Sequence | Unlimited | Record unscored | Off | 90 seconds |
+| In one · 5 letters | Single, 5 letters, starts with a clue | 3 | Reject | Off | Off |
 
 These are **solo adaptations**, not a complete TV recreation. The main-round inspiration is ten seconds per guess with five guesses: on TV, invalid words or timeouts pass control to another team, which this app adapts to word failure. The final's inspiration is the earlier four-, five-, six-letter sprint within ninety seconds. The final defaults to unlimited guesses at every length, with unknown words recorded but no attempt penalty; only the overall deadline ends an unfinished final. Other presets default to five guesses per word. Players may customise either limit. This app retains same-length retries, without TV money, teams, passing, larger puzzlewords or later-series gambles. The final's unknown-word policy is a practice choice, not a claim about TV penalties.
 
 Timing evidence: [Lingo (British game show), revival gameplay](https://en.wikipedia.org/wiki/Lingo_(British_game_show)) and [UKGameshows, Lingo](https://www.ukgameshows.com/ukgs/Lingo). Both were read to verify the ten-second main-round and ninety-second final timings.
 
 All durations are editable positive whole seconds. During play, timers use elapsed wall time and **continue across tab switches, browser suspension and open dialogs**. Returning to an active suspended tab reconciles its deadlines immediately. A late submission or give-up action cannot bypass expiry. **Solving a word or giving up pauses the overall clock until explicit continuation**, including while dialogs are open or the page is suspended. Continuation resumes the exact remaining milliseconds rather than refilling the round budget; each new word's own clock still gets its configured duration. Ordinary word failures (attempt exhaustion, unknown-word failure or word timeout) retain the running-overall-clock policy. A successful final stops its clock permanently until a fresh round. Word results stop that word's own clock.
+
+## In one clue puzzles
+
+Approved in conversation on 2026-10-15. Inspired by the New York Times' subscriber puzzle Wordle in 1, where each round has a single clue and only one possible solution, adapted here to single words rather than a five-puzzle round. With **Start with a clue** on, each word begins with one given clue: a checked word with its letter feedback, shown above the guess rows and not counted as a guess. **Each clue has exactly one possible correct guess:** the answer is the only accepted word of that length that fits it, so it can be found by reasoning from the clue alone. This is a guarantee, not a preference. Clue selection enforces it, the generated-data tests re-check every stored clue, and play re-checks each clue against the loaded word list before using it. **No first letter is supplied**, and guesses may start with any letter.
+
+- The answer solves the word.
+- An unknown word follows the unknown-word policy as usual.
+- Any other accepted word therefore contradicts the clue. It is **rejected with its reason** (the first contradiction found, for example "3rd letter must be A", "R isn't in the word", "E must appear, but not 2nd", "Only one E"), uses one try, and receives no letter feedback: the clue stays the only information. Rejected tries never change keyboard knowledge; the keyboard starts with the clue's evidence.
+- Running out of tries fails the word and reveals the answer, like any attempts loss. Unlimited guesses keep Give up. Word clocks work as usual; a rejected try is a spent attempt, so it resets a per-guess clock.
+
+The setting applies to single words only; a sequence ignores it. Clues are prepared ahead of time with the word lists (see [wordlist.md](wordlist.md#clue-puzzles)). Answers without a qualifying clue never appear in this mode; at the agreed clue rules, 78%, 91% and 97.5% of 4-, 5- and 6-letter answers qualify. History records clue words like any other, under the In one group or Custom. There is no difficulty setting, multi-puzzle round or clue search during play.
 
 ## Attempt history
 

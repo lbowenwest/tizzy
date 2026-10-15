@@ -43,20 +43,22 @@ export type Round = {
 };
 export const guessOptions: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-/** Exact matches consume letters first; misplaced matches can only use what's left. */
+// Unmatched answer letters a–z; reused because building clues evaluates millions of pairs.
+const remaining = new Int8Array(26);
+/** Exact matches consume letters first; misplaced matches can only use what's left. Words are lowercase a–z. */
 export function evaluateGuess(answer: string, word: string): LetterFeedback[] {
-  const feedback: LetterFeedback[] = Array(word.length).fill('absent');
-  const remaining = new Map<string, number>();
+  const feedback: LetterFeedback[] = [];
+  remaining.fill(0);
   for (let index = 0; index < answer.length; index++) {
-    if (word[index] === answer[index]) feedback[index] = 'correct';
-    else remaining.set(answer[index], (remaining.get(answer[index]) ?? 0) + 1);
+    const letter = answer.charCodeAt(index) - 97;
+    if (word.charCodeAt(index) - 97 === letter) feedback.push('correct');
+    else { feedback.push('absent'); remaining[letter]++; }
   }
   for (let index = 0; index < word.length; index++) {
-    if (feedback[index] === 'correct') continue;
-    const available = remaining.get(word[index]) ?? 0;
-    if (available > 0) {
+    const letter = word.charCodeAt(index) - 97;
+    if (feedback[index] !== 'correct' && remaining[letter] > 0) {
       feedback[index] = 'present';
-      remaining.set(word[index], available - 1);
+      remaining[letter]--;
     }
   }
   return feedback;

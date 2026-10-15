@@ -4,7 +4,7 @@
 
 [Game design](design.md) defines the agreed rules; [codebase architecture](codebase.md) defines the agreed React/TypeScript/Vite approach. The shared mobile-first layout and selectable themes have been approved in conversation and are recorded in [ui.md](ui.md). No gameplay UI should be implemented from an invented layout. First obtain the word source, establish the application and its data-loading path, then produce and approve a UI design before building the game. This is a plan, not permission to execute it.
 
-The phases below identify observable checkpoints, not estimates or one task per file. F1–F3, U1 and G1–G7 are implemented for the approved solo practice scope, including editable ITV-inspired timing presets. Follow-up player feedback added 1–10 guesses per word and clarified preset preview versus Apply now/Save for next round, retaining round snapshots and five-guess preset defaults outside Final sprint. Further feedback made Final sprint unlimited per word, with its overall timer as the only failure limit; custom settings can also select Unlimited. Background continuation and consumed-guess timer resets were agreed in conversation and recorded in design.md. Later feedback pauses overall round time after a solve or Give up until explicit continuation, preserving the remaining budget; ordinary failures still use wall time. Physical iOS/native-keyboard validation is still outstanding. Device-local attempt history was approved in conversation on 2026-10-14, recorded in design.md, ui.md and codebase.md, and implemented as H1–H2 below. Use the agreed static React app, framework-independent puzzle and round logic, ESDB source, and no backend/account/daily limit/ITV assets.
+The phases below identify observable checkpoints, not estimates or one task per file. F1–F3, U1 and G1–G7 are implemented for the approved solo practice scope, including editable ITV-inspired timing presets. Follow-up player feedback added 1–10 guesses per word and clarified preset preview versus Apply now/Save for next round, retaining round snapshots and five-guess preset defaults outside Final sprint. Further feedback made Final sprint unlimited per word, with its overall timer as the only failure limit; custom settings can also select Unlimited. Background continuation and consumed-guess timer resets were agreed in conversation and recorded in design.md. Later feedback pauses overall round time after a solve or Give up until explicit continuation, preserving the remaining budget; ordinary failures still use wall time. Physical iOS/native-keyboard validation is still outstanding. Device-local attempt history was approved in conversation on 2026-10-14, recorded in design.md, ui.md and codebase.md, and implemented as H1–H2 below. In one clue puzzles were approved in conversation on 2026-10-15, recorded in design.md, ui.md, codebase.md and wordlist.md, and planned as C1–C3 below; C1 is implemented, C2–C3 are not. Use the agreed static React app, framework-independent puzzle and round logic, ESDB source, and no backend/account/daily limit/ITV assets.
 
 ## Foundations
 
@@ -129,8 +129,92 @@ History dialog ──open──▶ loadHistory() ──▶ summarizeHistory(reco
 - **Dependencies/output:** consumes H1's interface; completes the feature.
 - **Validation:** `npm run test:e2e` with a new `tests/browser/history.spec.ts` in both projects. Inspect desktop, 320px and 390px screenshots in all three themes.
 
+## In one clue puzzles
+
+Shared shape: one evaluator (`evaluateGuess`) chooses clues at build time and scores play; the build ships words only; the controller owns clue rounds, the missing first-letter check and rejections; presentation renders. The build script newly imports `game`; the other directions are unchanged (`game → wordLists` for types only, `history → game, presets`).
+
+```text
+words:build ──evaluateGuess──▶ public/words/clues/<n>.txt      "answer clue1 [clue2 [clue3]]"
+loadWordData ──▶ WordData.clues[length]: { answer, clues }[]
+newWord (rules.clue, single) ──▶ Round.clue = { word, feedback: evaluateGuess(answer, word) }
+submitGuess ──▶ answer: won · unknown: invalid-word policy · other known word: rejected Guess (spends a try)
+Play ──▶ clue row above the board · rejected rows + reason · keyboardFeedback([clue, ...guesses])
+```
+
+### C1 — Generate, verify and load clue data (implemented)
+
+- **Authority/outcome:** `design.md` In one clue puzzles; `wordlist.md` Clue puzzles. `npm run words:build` deterministically writes clue assets that follow the agreed rules, the generated-data tests prove strict uniqueness for every stored clue, and the app loads them.
+- **Shape:**
+  - `scripts/build-wordlists.ts`, after curating answers: for each length and each curated answer as a candidate clue word, evaluate it against every accepted guess with `evaluateGuess` (imported from `src/game.ts`) and bucket guesses by feedback. A bucket holding exactly one word, which is a curated answer other than the clue word, with at most `Math.floor(length / 2)` right-place letters, yields a qualifying (answer, clue). Per answer, order qualifying clues by right-place count, then non-absent count, then alphabetically, and keep the first, middle and last without repeats. Write sorted `public/words/clues/<n>.txt` and log per-length counts. If build time is excessive (the pre-plan measurement took 0.4/1.8/4.8 s with a packed encoder), make `evaluateGuess` cheaper in place; never copy it.
+  - `src/wordLists.ts`: `WordData` gains `clues: Record<4 | 5 | 6, { answer: string; clues: string[] }[]>`, fetched with the other lists. Each line must be one answer plus one to three words, all lowercase and of that length; anything else fails loading through the existing error path. Unit-test `WordData` fixtures gain `clues`.
+  - `tests/wordlists.test.ts`: for every line, the answer is a curated answer; its clues are distinct curated answers other than the answer; there are at most three; each meets the right-place ceiling; lines are sorted by answer. Strict uniqueness is checked by grouping stored pairs by clue word, making one pass over the accepted list per distinct clue word. Pin per-length line counts like the other lists.
+  - `docs/wordlist.md`: replace the measured percentages with the generated counts.
+  - As implemented: `evaluateGuess` now counts unmatched letters in a reused 26-letter buffer instead of a `Map` (about 5× faster, same results), and the build and tests key feedback numerically. `words:build` and `npm test` each take about 5 s; the counts match the pre-plan measurement exactly (1,363 / 2,833 / 4,643).
+- **Acceptance:**
+  - **Normal:** clue files exist for 4, 5 and 6 letters, and the app loads them in development and production preview.
+  - **Edge:** answers without a qualifying clue are absent; an answer with one or two qualifying clues lists that many; running `words:build` twice changes nothing; the guess and answer assets are unchanged.
+  - **Failure:** a missing or malformed clue file shows the existing load error and **Try again**; checksum failures behave as before.
+- **Evidence anchors:** `scripts/build-wordlists.ts` (curation, write loop); `tests/wordlists.test.ts` (recomputed expectations, pinned counts); `src/wordLists.ts` `loadList`; `tests/browser/shell.spec.ts` (missing/malformed list checks); `src/App.test.tsx`.
+- **Dependencies/output:** none. Produces `WordData.clues` for C2.
+- **Validation:** `npm run words:build` twice with an empty `git diff` the second time; `npm test`; `npm run build`; `npx playwright test tests/browser/shell.spec.ts`.
+
+### C2 — Play clue rounds in the controller
+
+- **Authority/outcome:** `design.md` In one clue puzzles and preset table. With `clue` on, a single word starts from a stored clue, accepts any first letter, wins on the answer, and rejects any other known word with its reason at the cost of a try. The rule persists and the In one preset exists.
+- **Shape:**
+  - `src/game.ts`:
+    - `Rules.clue: boolean`, default `false`; `normalizeRules` resets it for sequences.
+    - `Round.clue: Guess | null`; `Guess` gains an optional `rejection` reason, present only on a rejected known word, whose `feedback` is `null`.
+    - `newWord`: for a single-word clue round, pick an entry from `data.clues[length]` (avoiding the previous answer, as for answers) and one of its clue words at random, with feedback from `evaluateGuess(answer, clue)`. Use it only after one pass over `data.guesses[length]` (the list `submitGuess` validates against) confirms the answer is the only word that fits; otherwise try the entry's other clues, then other entries. If nothing qualifies it throws, like an empty answer list. This runtime check enforces the one-correct-guess guarantee whatever data is loaded.
+    - `explainContradiction(clue, word)`: returns `null` exactly when `evaluateGuess(word, clue.word)` equals the clue's feedback. Otherwise it returns the first broken constraint, checking right-place letters, then elsewhere letters (must appear, not in that position), then absent letters (not in the word, or no more copies than the clue shows, and not in that position). Use the wording in `design.md`.
+    - `evaluateCandidate` gains a flag to skip the first-letter check; `submitGuess` passes it for clue rounds.
+    - `submitGuess`: a valid word other than the answer in a clue round becomes a rejected `Guess`. Its message names the word and the reason. It spends an attempt through the existing exhaustion and per-guess-reset logic. Because `newWord` guarantees that only the answer fits, `explainContradiction` always finds a reason here; a `null` would mean that guarantee was bypassed, so it is an invariant error, not a fallback message.
+  - `src/presets.ts`: `sameRules` compares `clue`; `describeRules` adds the clue and no-first-letter wording. Add `in-one` (`In one · 5 letters`: default rules with `clue: true`, `maxGuesses: 3`), listed last.
+  - `src/preferences.ts`: a missing `clue` upgrades to `false`; a non-boolean value falls back to the defaults.
+  - `src/history.ts` `toRecord`: `unknown` counts only `feedback === null` guesses without a `rejection`. Record shape and storage version are unchanged.
+  - `keyboardFeedback` is unchanged: rejected guesses have `null` feedback, so they are already skipped; callers include the clue.
+- **Acceptance:**
+  - **Normal:** applying In one starts a 5-letter clue round with three tries and no word clock. The clue's feedback matches `evaluateGuess`. A guess starting with any letter is evaluated. The answer wins. A known wrong word is rejected with the expected reason, uses a try, has no feedback and leaves keyboard knowledge unchanged. A third rejection loses with reason `attempts`.
+  - **Edge:**
+    - Reasons cover right place, elsewhere, absent, excess duplicate and wrong-position cases.
+    - Unknown words follow all three invalid-word policies as before.
+    - A rejection resets a per-guess clock.
+    - Unlimited tries keep Give up.
+    - A sequence with `clue: true` plays as an ordinary sequence with a first letter and is recognised as its preset.
+    - `nextWord` avoids repeating the previous answer.
+    - History counts rejected tries as guesses, not unknown words, under the `in-one` group.
+  - **Property:** across many real (clue, word) pairs, `explainContradiction` returns `null` exactly when the feedback matches the clue's.
+  - **Guarantee:** given a clue file whose first clue another loaded guess also fits, `newWord` never uses that clue, choosing a valid one instead or throwing when none exists. For every clue `newWord` returns, no accepted word other than the answer has a `null` contradiction.
+  - **Failure:** older stored preferences load with `clue: false`; a malformed `clue` restores the defaults.
+- **Evidence anchors:** `src/game.ts` (`Rules`, `Guess`, `Round`, `newWord`, `evaluateCandidate`, `submitGuess`, `normalizeRules`); `src/presets.ts`; `src/preferences.ts` and its tests; `src/history.ts` `toRecord`; `src/game.test.ts`, `src/clocks.test.ts` and `src/history.test.ts` fixtures.
+- **Dependencies/output:** consumes C1's `WordData.clues`. Produces `Rules.clue`, `Round.clue`, `Guess.rejection`, `explainContradiction` and the `in-one` preset for C3.
+- **Validation:** `npm test` and `tsc --noEmit`.
+
+### C3 — Present clue puzzles
+
+- **Authority/outcome:** `ui.md` Clue puzzles and Settings. The player can turn on Start with a clue or apply In one, read the clue row, enter any word without a hint tile, see rejected tries with their reasons, and see keyboard evidence from the clue.
+- **Shape:**
+  - `src/Settings.tsx`: a **Start with a clue** checkbox beside the format controls, enabled only for single words. Changing it marks the draft Custom. Footnote copy states that clue puzzles supply no first letter.
+  - `src/Play.tsx`, when `round.clue` is set:
+    - Hide the first-letter behaviour: no supplied tile, no "Starts with" label, a neutral feedback prompt, and **One clue given** in the meta line. The eyebrow reads `SINGLE WORD · CLUE` and the counter **Try n of N**.
+    - Render the clue as a labelled row above the board element, so it stays visible when an Unlimited board scrolls.
+    - Rejected rows use unscored tiles with a ✕ mark and an accessible name that includes the reason; the reason also goes through the feedback status.
+    - Keyboard knowledge is `keyboardFeedback([round.clue, ...round.guesses])`.
+  - `src/App.tsx`: one sentence of help.
+  - `src/styles.css`: `.clue-row` and rejected-tile styles in all three themes.
+- **Acceptance:** Playwright, with a routed fixture whose clue is the only fit in the routed guess list:
+  - Applying In one shows the clue row with marks, an active row with no supplied tile, and keyboard keys coloured from the clue.
+  - A known wrong word starting with a different letter is rejected with the reason announced; the counter advances and the keyboard is unchanged.
+  - An unknown word is rejected free.
+  - The answer solves and History lists it under In one with the right guess count; three rejections lose and reveal the answer.
+  - The checkbox is disabled for sequences, which still supply the first letter.
+  - Touch play works; at 320px and 390px in all three themes there is no horizontal overflow (screenshots inspected).
+- **Evidence anchors:** `src/Play.tsx` (`Tile`, row rendering, `first`, `knowledge`); `src/Settings.tsx` round-clock toggle; `src/App.tsx` help; `tests/browser/history.spec.ts` fixture; `tests/browser/keyboard.spec.ts` and `settings.spec.ts`.
+- **Dependencies/output:** consumes C2. Completes the feature; then update the `ui.md` implementation boundary, the README and this plan's status.
+- **Validation:** `npm run test:e2e` in both projects, with screenshot inspection.
+
 ## Integrated acceptance and coordination
 
-Once the relevant slices are complete, run Vitest, Playwright at mobile/desktop viewports, and a production Vite build. Confirm attribution is shipped, no browser request reaches a live dictionary, word rules live outside React, all three invalid policies work, same-length retries and both clock scopes distinguish word from round failure, and settings survive reload. After H1–H2, finished words appear once in their preset group and history survives reload without affecting play. Tests belong to each slice; this is a cross-slice check, not a separate implementation task.
+Once the relevant slices are complete, run Vitest, Playwright at mobile/desktop viewports, and a production Vite build. Confirm attribution is shipped, no browser request reaches a live dictionary, word rules live outside React, all three invalid policies work, same-length retries and both clock scopes distinguish word from round failure, and settings survive reload. After H1–H2, finished words appear once in their preset group and history survives reload without affecting play. After C1–C3, every shipped clue has exactly one possible correct guess (enforced at build, test and play), In one plays end to end without a first letter, and ordinary modes and their tests are unchanged. Tests belong to each slice; this is a cross-slice check, not a separate implementation task.
 
-**Order:** F1 and F2 can be done independently; F3 consumes both. U1 is a design/approval gate before G2 presentation. G1 can proceed from F1/F3 while U1 is reviewed. Then G2 → G3 → G4 → G5 → G6 → G7 share the controller and UI and should be integrated in dependency order. Do not use parallel implementation on overlapping React/controller surfaces. The timer-background and preset-value decisions were resolved before timed implementation; actual-device mobile testing remains a separate evidence gap. H1 → H2 run directly in order by one implementer: H2 touches the same App/Play surfaces, so parallel work would only add merge risk.
+**Order:** F1 and F2 can be done independently; F3 consumes both. U1 is a design/approval gate before G2 presentation. G1 can proceed from F1/F3 while U1 is reviewed. Then G2 → G3 → G4 → G5 → G6 → G7 share the controller and UI and should be integrated in dependency order. Do not use parallel implementation on overlapping React/controller surfaces. The timer-background and preset-value decisions were resolved before timed implementation; actual-device mobile testing remains a separate evidence gap. H1 → H2 run directly in order by one implementer: H2 touches the same App/Play surfaces, so parallel work would only add merge risk. C1 → C2 → C3 likewise run directly in order: C2 consumes C1's data contract and C3 consumes C2's round shape, and all three meet in `game.ts`/`Play.tsx`, so there is no isolated boundary worth orchestrating.

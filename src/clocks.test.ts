@@ -6,6 +6,7 @@ import { presets } from './presets';
 const data: WordData = {
   answers: { 4: ['camp', 'coat'], 5: ['chair'], 6: ['castle'] },
   guesses: { 4: ['camp', 'coat'], 5: ['chair', 'cargo'], 6: ['castle', 'candle'] },
+  clues: { 4: [], 5: [], 6: [] },
 };
 const allowed = new Set(data.guesses[4]);
 const rules = (changes: Partial<Rules> = {}): Rules => ({ ...copyRules(defaultRules), length: 4, ...changes });

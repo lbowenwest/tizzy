@@ -54,6 +54,16 @@ ORDER BY word;
 
 The generator applies this pinned exclusion set after common-tier and safety curation, removing 1,025 previous answers (116 four-letter, 354 five-letter and 555 six-letter words). It never modifies the accepted-guess assets.
 
+## Clue puzzles
+
+`npm run words:build` also writes `public/words/clues/<n>.txt` for [In one clue puzzles](design.md#in-one-clue-puzzles). Each line is an answer followed by up to three clue words, space-separated; answers are sorted and only those with a qualifying clue are listed. A clue's letter feedback is not stored: the game derives it with the same `evaluateGuess` the build used. A clue word qualifies for an answer when:
+
+- it is itself a curated answer (a familiar word) of the same length, and not the answer;
+- its feedback shows at most half of its letters in the right place (2 of 4, 2 of 5, 3 of 6), so it is not a near giveaway; and
+- **no other accepted guess of that length** would produce the same feedback, so every other word a player can enter contradicts the clue.
+
+Qualifying clues are ordered from least to most revealed (right-place letters, then letters shown at all, then alphabetically); an answer keeps the first, middle and last of them, without repeats, so its clues span difficulty. Generation is deterministic and takes a few seconds. 1,363 of 1,748 four-letter (78%), 2,833 of 3,115 five-letter (91%) and 4,643 of 4,761 six-letter answers (97.5%) have a clue; the rest are mostly crowded families such as `bells`/`balls`/`bills`. Most listed answers keep three clues (2,326 of the five-letter ones). The generated-data tests re-check every stored clue against the full accepted list, and play re-checks each clue it chooses against the loaded guess list, skipping any another word could fit.
+
 Each generated asset is sorted, unique, and newline-delimited, and every answer is also an accepted guess. `public/words/COPYRIGHT.txt` is the upstream copyright and permission notice. Include an accessible attribution link to that notice when the player UI is built.
 
-Regenerate with `npm run words:build` and verify with `npm test` and `npm run test:e2e`. Vite serves `public/` at the site root in both development and production builds, so the app fetches `/words/<n>.txt` and `/words/answers/<n>.txt` locally with no development proxy. Missing or malformed lists produce a visible error.
+Regenerate with `npm run words:build` and verify with `npm test` and `npm run test:e2e`. Vite serves `public/` at the site root in both development and production builds, so the app fetches `/words/<n>.txt`, `/words/answers/<n>.txt` and `/words/clues/<n>.txt` locally with no development proxy. Missing or malformed lists produce a visible error.

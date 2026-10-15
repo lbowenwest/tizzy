@@ -5,6 +5,7 @@ import type { WordData } from './wordLists';
 const data: WordData = {
   answers: { 4: ['camp', 'coat'], 5: ['chair', 'clean'], 6: ['castle'] },
   guesses: { 4: ['camp', 'coat', 'care'], 5: ['chair', 'clean', 'cargo'], 6: ['castle', 'candle'] },
+  clues: { 4: [], 5: [], 6: [] },
 };
 const rules: Rules = { ...defaultRules };
 const allowed = new Set(data.guesses[5]);

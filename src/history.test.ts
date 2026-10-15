@@ -7,6 +7,7 @@ import type { WordData } from './wordLists';
 const data: WordData = {
   answers: { 4: ['camp'], 5: ['chair'], 6: ['castle'] },
   guesses: { 4: ['camp', 'coat'], 5: ['chair', 'cargo'], 6: ['castle', 'candle'] },
+  clues: { 4: [], 5: [], 6: [] },
 };
 const allowed = (length: WordLength) => new Set(data.guesses[length]);
 const preset = (key: string) => copyRules(presets.find((entry) => entry.key === key)!.rules);

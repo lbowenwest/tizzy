@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { evaluateGuess } from '../src/game';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const lengths = [4, 5, 6] as const;
@@ -70,12 +71,56 @@ for (const length of lengths) {
   if (answers.get(length)!.length === 0) throw new Error(`No ${length}-letter answers were curated`);
 }
 
+const feedbackKey = (answer: string, word: string) =>
+  evaluateGuess(answer, word).reduce((key, mark) => key * 3 + (mark === 'correct' ? 2 : mark === 'present' ? 1 : 0), 0);
+
+/**
+ * A clue is a familiar word whose feedback against the answer no other accepted guess shares,
+ * so only the answer fits it. At most half its letters may be right-place, to avoid giveaways.
+ * Each answer keeps its hardest, middle and easiest qualifying clues.
+ */
+function buildClues(length: Length): string[] {
+  const accepted = guesses.get(length)!;
+  const familiar = new Set(answers.get(length)!);
+  const maxCorrect = Math.floor(length / 2);
+  const found = new Map<string, { clue: string; correct: number; shown: number }[]>();
+  for (const clue of familiar) {
+    const buckets = new Map<number, { count: number; word: string }>();
+    for (const word of accepted) {
+      const key = feedbackKey(word, clue);
+      const bucket = buckets.get(key);
+      if (bucket) bucket.count++; else buckets.set(key, { count: 1, word });
+    }
+    for (const { count, word } of buckets.values()) {
+      if (count !== 1 || word === clue || !familiar.has(word)) continue;
+      const feedback = evaluateGuess(word, clue);
+      const correct = feedback.filter((mark) => mark === 'correct').length;
+      if (correct > maxCorrect) continue;
+      const shown = feedback.filter((mark) => mark !== 'absent').length;
+      const options = found.get(word) ?? [];
+      options.push({ clue, correct, shown });
+      found.set(word, options);
+    }
+  }
+  return [...found].sort(([a], [b]) => (a < b ? -1 : 1)).map(([answer, options]) => {
+    options.sort((a, b) => a.correct - b.correct || a.shown - b.shown || (a.clue < b.clue ? -1 : 1));
+    const picks = [options[0], options[Math.floor((options.length - 1) / 2)], options[options.length - 1]];
+    return [answer, ...new Set(picks.map(({ clue }) => clue))].join(' ');
+  });
+}
+const clues = new Map(lengths.map((length) => [length, buildClues(length)] as const));
+
 mkdirSync(join(root, 'public/words/answers'), { recursive: true });
+mkdirSync(join(root, 'public/words/clues'), { recursive: true });
 for (const length of lengths) {
   writeFileSync(join(root, `public/words/${length}.txt`), `${guesses.get(length)!.join('\n')}\n`);
   writeFileSync(join(root, `public/words/answers/${length}.txt`), `${answers.get(length)!.join('\n')}\n`);
+  writeFileSync(join(root, `public/words/clues/${length}.txt`), `${clues.get(length)!.join('\n')}\n`);
 }
 
 console.log('Static ESDB lists:', Object.fromEntries(
-  lengths.flatMap((length) => [[`guesses/${length}`, guesses.get(length)!.length], [`answers/${length}`, answers.get(length)!.length]]),
+  lengths.flatMap((length) => [
+    [`guesses/${length}`, guesses.get(length)!.length], [`answers/${length}`, answers.get(length)!.length],
+    [`clues/${length}`, clues.get(length)!.length],
+  ]),
 ));

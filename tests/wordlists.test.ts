@@ -2,7 +2,10 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { evaluateGuess } from '../src/game';
 
+const feedbackKey = (answer: string, word: string) =>
+  evaluateGuess(answer, word).reduce((key, mark) => key * 3 + (mark === 'correct' ? 2 : mark === 'present' ? 1 : 0), 0);
 const readList = (path: string) => readFileSync(path, 'utf8').trimEnd().split('\n');
 const guessSource = readFileSync('vendor/esdb-2026.02.25-60-BZ5.txt');
 const tierSource = readFileSync('vendor/esdb-2026.02.25-sizes.txt');
@@ -82,6 +85,48 @@ describe('static ESDB word lists', () => {
       expect(answers.filter((word) => excluded.has(word))).toEqual([]);
     }
   });
+
+  it.each([
+    [4, 1363],
+    [5, 2833],
+    [6, 4643],
+  ])('gives %i-letter answers up to three familiar, non-giveaway clues', (length, count) => {
+    const answers = new Set(readList(`public/words/answers/${length}.txt`));
+    const lines = readList(`public/words/clues/${length}.txt`).map((line) => line.split(' '));
+    expect(lines).toHaveLength(count);
+    expect(lines.map(([answer]) => answer)).toEqual([...new Set(lines.map(([answer]) => answer))].sort());
+    for (const [answer, ...clues] of lines) {
+      expect(answers.has(answer)).toBe(true);
+      expect(clues.length).toBeGreaterThanOrEqual(1);
+      expect(clues.length).toBeLessThanOrEqual(3);
+      expect(new Set(clues).size).toBe(clues.length);
+      for (const clue of clues) {
+        expect(clue).not.toBe(answer);
+        expect(answers.has(clue)).toBe(true);
+        expect(evaluateGuess(answer, clue).filter((mark) => mark === 'correct').length).toBeLessThanOrEqual(Math.floor(length / 2));
+      }
+    }
+  });
+
+  it.each([4, 5, 6])('gives every %i-letter clue exactly one fitting accepted guess: its answer', (length) => {
+    const accepted = readList(`public/words/${length}.txt`);
+    const answersByClue = new Map<string, string[]>();
+    for (const [answer, ...clues] of readList(`public/words/clues/${length}.txt`).map((line) => line.split(' '))) {
+      for (const clue of clues) answersByClue.set(clue, [...(answersByClue.get(clue) ?? []), answer]);
+    }
+    const ambiguous: string[] = [];
+    for (const [clue, clueAnswers] of answersByClue) {
+      const fits = new Map<number, number>();
+      for (const word of accepted) {
+        const key = feedbackKey(word, clue);
+        fits.set(key, (fits.get(key) ?? 0) + 1);
+      }
+      for (const answer of clueAnswers) {
+        if (fits.get(feedbackKey(answer, clue)) !== 1) ambiguous.push(`${answer} ${clue}`);
+      }
+    }
+    expect(ambiguous).toEqual([]);
+  }, 60_000);
 
   it('keeps the upstream permission notice with the lists', () => {
     expect(readFileSync('public/words/COPYRIGHT.txt', 'utf8')).toContain(

@@ -772,6 +772,71 @@ dialog:has(.settings-form) > :is(.dialog-heading,h2) {
 .guess-distribution li[data-latest] .distribution-bar {
   background:var(--accent)
 }
+.solve-chart {
+  display:block;
+  overflow:visible
+}
+.solve-figure {
+  margin:0
+}
+.legend-average {
+  display:inline-block;
+  width:16px;
+  vertical-align:middle;
+  border-top:1px dashed var(--muted)
+}
+.solve-figure figcaption,.stats-note {
+  margin:8px 0 0;
+  font-size:12px;
+  color:var(--muted)
+}
+.chart-label {
+  fill:var(--muted);
+  font-size:10px
+}
+.chart-grid {
+  stroke:var(--line);
+  stroke-width:1
+}
+.chart-average {
+  stroke:var(--muted);
+  stroke-width:1;
+  stroke-dasharray:4 3
+}
+.chart-line {
+  fill:none;
+  stroke:var(--accent);
+  stroke-width:2;
+  stroke-linejoin:round
+}
+.chart-point {
+  fill:var(--accent)
+}
+.chart-failed {
+  fill:none;
+  stroke:var(--muted);
+  stroke-width:2;
+  stroke-linecap:round
+}
+.chart-latest {
+  stroke:var(--paper);
+  stroke-width:2
+}
+path.chart-latest {
+  stroke:var(--ink);
+  stroke-width:3
+}
+.chart-curve {
+  fill:var(--accent);
+  fill-opacity:.14;
+  stroke:var(--accent);
+  stroke-width:2;
+  stroke-linejoin:round
+}
+.chart-rug {
+  fill:var(--ink);
+  fill-opacity:.4
+}
 .recent-words li {
   display:flex;
   flex-wrap:wrap;

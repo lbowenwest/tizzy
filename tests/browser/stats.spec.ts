@@ -125,6 +125,25 @@ test('words recorded under custom settings are deleted', async ({ page }) => {
   expect(groups).toEqual(['practice', 'practice']);
 });
 
+test('In one charts recent solve times and fits a spread once two words are solved', async ({ page }) => {
+  const record = (endedAt: number, durationMs: number, result = 'solved') => ({ id: `${endedAt}:chair`, roundId: endedAt, answer: 'chair',
+    length: 5, format: 'single', group: 'in-one', result, reason: result === 'solved' ? null : 'attempts', guesses: 1, unknown: 0, durationMs, endedAt });
+  const seeded = JSON.stringify({ version: 1, records: [record(1, 10_000), record(2, 40_000), record(3, 70_000, 'failed'), record(4, 20_000)] });
+  await page.addInitScript((value) => {
+    window.localStorage.setItem('word-practice-history-v1', value);
+    window.localStorage.setItem('word-practice-preferences-v1', JSON.stringify({ theme: 'letterpress', preset: 'in-one' }));
+  }, seeded);
+  await fixture(page);
+  const dialog = await openStats(page);
+  await expect(stat(page, 'Average solve')).toHaveText('0:23');
+  await expect(stat(page, 'Median')).toHaveText('0:20');
+  await expect(stat(page, 'Fastest')).toHaveText('0:10');
+  await expect(dialog.getByRole('img', { name: 'Last 4 words, oldest first: 0:10, 0:40, not solved (1:10), 0:20' })).toBeVisible();
+  // ln(10, 20, 40 seconds) has mean ln 20 and spread ln 2 · √(2/3), so one sigma is about 0:11–0:35.
+  await expect(dialog.getByText('About two-thirds of your solves take 0:11–0:35.')).toBeVisible();
+  await expect(recent(page).nth(1)).toHaveText(/CHAIR.*Out of guesses.*1:10/);
+});
+
 test('clearing stats needs confirmation', async ({ page }) => {
   await fixture(page);
   await guess(page, 'CHAIR');

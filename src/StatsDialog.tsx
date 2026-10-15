@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from 'react';
 import { Dialog } from './Dialog';
 import { clearHistory, loadHistory, summarizeHistory, type HistoryRecord } from './history';
 import { defaultPreset, isPresetKey, modes, presets } from './presets';
+import { formatDuration, SolveTimes } from './SolveTimes';
 
 const recentLimit = 10;
 const outcomes: Record<NonNullable<HistoryRecord['reason']>, string> = {
@@ -10,10 +11,7 @@ const outcomes: Record<NonNullable<HistoryRecord['reason']>, string> = {
 const outcome = ({ reason }: HistoryRecord) => reason === null ? 'Solved' : outcomes[reason];
 const guessCount = (count: number) => `${count} ${count === 1 ? 'guess' : 'guesses'}`;
 const wordCount = (count: number) => `${count} ${count === 1 ? 'word' : 'words'}`;
-function duration(ms: number) {
-  const seconds = Math.round(ms / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-}
+const solveTime = (ms: number | null) => ms === null ? '—' : formatDuration(ms);
 
 export function StatsDialog({ preset, onClose }: { preset: string; onClose: () => void }) {
   const [records, setRecords] = useState(loadHistory);
@@ -23,20 +21,14 @@ export function StatsDialog({ preset, onClose }: { preset: string; onClose: () =
   const variants = presets.filter(({ mode }) => mode === current.mode);
   const summary = summarizeHistory(records).get(selected);
   const words = records.filter(({ group }) => group === selected);
-  const latest = words.at(-1);
-  const failed = summary ? summary.played - summary.solved : 0;
-  const largest = Math.max(1, failed, ...(summary?.guessDistribution.map(({ count }) => count) ?? []));
+  const times = summary?.distribution.by === 'time' ? summary.distribution : null;
+  const guesses = summary?.distribution.by === 'guesses' ? summary.distribution : null;
+  const largest = Math.max(1, ...(guesses?.rows.map(({ count }) => count) ?? []));
   // A mode opens on the variant being played, else the one played last, else its first.
   const chooseMode = (mode: string) => {
     const keys = presets.filter((entry) => entry.mode === mode).map(({ key }) => key);
     setSelected(keys.includes(preset) ? preset : records.filter(({ group }) => keys.includes(group)).at(-1)?.group ?? keys[0]);
   };
-  const row = (key: string, label: string, mark: string, count: number, isLatest: boolean) =>
-    <li key={key} aria-label={`${label}: ${wordCount(count)}`} data-latest={isLatest || undefined}>
-      <span aria-hidden="true">{mark}</span>
-      <span className="distribution-bar" aria-hidden="true" style={{ '--share': count / largest } as CSSProperties} />
-      <span aria-hidden="true">{count}</span>
-    </li>;
 
   return (
     <Dialog title="Your stats." titleId="stats-title" onClose={onClose}>
@@ -55,24 +47,34 @@ export function StatsDialog({ preset, onClose }: { preset: string; onClose: () =
             <div><dt>Best streak</dt><dd>{summary.bestStreak}</dd></div>
           </dl>
           <dl className="stats-extra">
-            <div><dt>Average solve</dt><dd>{summary.averageSolveMs === null ? '—' : duration(summary.averageSolveMs)}</dd></div>
+            <div><dt>Average solve</dt><dd>{solveTime(summary.averageSolveMs)}</dd></div>
+            {times && <>
+              <div><dt>Median</dt><dd>{solveTime(times.medianMs)}</dd></div>
+              <div><dt>Fastest</dt><dd>{solveTime(times.fastestMs)}</dd></div>
+            </>}
             {summary.rounds && <>
               <div><dt>Rounds completed</dt><dd>{summary.rounds.completed}</dd></div>
               <div><dt>Round time ran out</dt><dd>{summary.rounds.expired}</dd></div>
             </>}
           </dl>
-          <h3>Guess distribution</h3>
-          <ol className="guess-distribution" aria-label="Guess distribution">
-            {summary.guessDistribution.map(({ guesses, count }) =>
-              row(String(guesses), guessCount(guesses), String(guesses), count, latest?.result === 'solved' && latest.guesses === guesses))}
-            {row('failed', 'Not solved', '✗', failed, latest?.result === 'failed')}
-          </ol>
+          {times && <SolveTimes distribution={times} averageMs={summary.averageSolveMs} />}
+          {guesses && <>
+            <h3>Guess distribution</h3>
+            <ol className="guess-distribution" aria-label="Guess distribution">
+              {guesses.rows.map(({ mark, label, count }, index) =>
+                <li key={mark} aria-label={`${label}: ${wordCount(count)}`} data-latest={index === guesses.latest || undefined}>
+                  <span aria-hidden="true">{mark}</span>
+                  <span className="distribution-bar" aria-hidden="true" style={{ '--share': count / largest } as CSSProperties} />
+                  <span aria-hidden="true">{count}</span>
+                </li>)}
+            </ol>
+          </>}
           <h3>Recent words</h3>
           <ol className="recent-words" aria-label="Recent words">
             {words.slice(-recentLimit).reverse().map((record) => <li key={record.id} data-result={record.result}>
               <strong>{record.answer.toUpperCase()}</strong>
               <span>{outcome(record)}</span>
-              <span>{guessCount(record.guesses)}</span>
+              <span>{times ? formatDuration(record.durationMs) : guessCount(record.guesses)}</span>
             </li>)}
           </ol>
         </>}

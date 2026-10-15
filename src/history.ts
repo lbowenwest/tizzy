@@ -16,10 +16,27 @@ export type HistoryRecord = {
   durationMs: number;
   endedAt: number;
 };
+/**
+ * How a group's words spread out. Usually solved words by guesses used, then a Not solved row.
+ * With one try every solve takes one guess, so time is what varies: recent words for a trend, plus a log-normal fit
+ * (solve times are skewed, so their logarithms are roughly normal) for a bell curve.
+ */
+export type Distribution = {
+  by: 'guesses';
+  rows: { mark: string; label: string; count: number }[];
+  latest: number; // Row holding the group's most recent word.
+} | {
+  by: 'time';
+  recent: { durationMs: number; solved: boolean }[]; // Oldest first, at most trendLimit.
+  solves: number[]; // Every solve time in ms, oldest first.
+  fastestMs: number | null;
+  medianMs: number | null;
+  fit: { mu: number; sigma: number } | null; // Of ln(seconds); needs two solves.
+};
 export type GroupSummary = {
   played: number;
   solved: number;
-  guessDistribution: { guesses: number; count: number }[]; // Solved words, every row from 1 to the guess limit.
+  distribution: Distribution;
   currentStreak: number;
   bestStreak: number;
   averageSolveMs: number | null;
@@ -76,6 +93,38 @@ export function parseHistory(raw: string | null): HistoryRecord[] {
   }
 }
 
+export const trendLimit = 20;
+const minimumSigma = 0.1; // Keeps identical solve times drawable as a narrow curve.
+
+function timeDistribution(entries: readonly HistoryRecord[]): Distribution {
+  const solves = entries.filter(({ result }) => result === 'solved').map(({ durationMs }) => durationMs);
+  const sorted = [...solves].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  const logs = solves.map((ms) => Math.log(Math.max(ms, 1000) / 1000));
+  const mu = logs.reduce((total, value) => total + value, 0) / logs.length;
+  const sigma = Math.sqrt(logs.reduce((total, value) => total + (value - mu) ** 2, 0) / logs.length);
+  return {
+    by: 'time',
+    recent: entries.slice(-trendLimit).map(({ durationMs, result }) => ({ durationMs, solved: result === 'solved' })),
+    solves,
+    fastestMs: sorted[0] ?? null,
+    medianMs: sorted.length === 0 ? null : sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2,
+    fit: solves.length < 2 ? null : { mu, sigma: Math.max(sigma, minimumSigma) },
+  };
+}
+
+function distribution(group: string, entries: readonly HistoryRecord[]): Distribution {
+  const limit = presetRules(group).maxGuesses;
+  if (limit === 1) return timeDistribution(entries);
+  // Unlimited presets show at least five rows, extended to the longest solve.
+  const rows = Array.from({ length: limit ?? Math.max(5, ...entries.filter(({ result }) => result === 'solved').map(({ guesses }) => guesses)) },
+    (_, index) => ({ mark: String(index + 1), label: `${index + 1} ${index === 0 ? 'guess' : 'guesses'}`, count: 0 }));
+  rows.push({ mark: '✗', label: 'Not solved', count: 0 });
+  const rowOf = ({ result, guesses }: HistoryRecord) => result === 'failed' ? rows.length - 1 : guesses - 1;
+  for (const entry of entries) rows[rowOf(entry)].count++;
+  return { by: 'guesses', rows, latest: rowOf(entries.at(-1)!) };
+}
+
 /** Statistics per group, derived from records alone. */
 export function summarizeHistory(records: readonly HistoryRecord[]): Map<string, GroupSummary> {
   const groups = new Map<string, HistoryRecord[]>();
@@ -86,11 +135,6 @@ export function summarizeHistory(records: readonly HistoryRecord[]): Map<string,
   }
   return new Map([...groups].map(([group, entries]) => {
     const solved = entries.filter(({ result }) => result === 'solved');
-    // Unlimited presets show at least five rows, extended to the longest solve.
-    const limit = presetRules(group).maxGuesses ?? Math.max(5, ...solved.map(({ guesses }) => guesses));
-    const guessDistribution = Array.from({ length: limit }, (_, index) => ({
-      guesses: index + 1, count: solved.filter(({ guesses }) => guesses === index + 1).length,
-    }));
     let currentStreak = 0;
     let bestStreak = 0;
     for (const { result } of entries) {
@@ -103,7 +147,7 @@ export function summarizeHistory(records: readonly HistoryRecord[]): Map<string,
     return [group, {
       played: entries.length,
       solved: solved.length,
-      guessDistribution,
+      distribution: distribution(group, entries),
       currentStreak,
       bestStreak,
       averageSolveMs: solved.length ? solved.reduce((total, { durationMs }) => total + durationMs, 0) / solved.length : null,

@@ -49,10 +49,13 @@ test('In one starts from the clue with one row, no first letter and one try', as
   await page.getByRole('button', { name: 'Stats', exact: true }).click();
   const stats = page.getByRole('dialog', { name: 'Your stats.' });
   await expect(stats.getByRole('group', { name: 'Mode' }).getByRole('button', { name: 'In one' })).toHaveAttribute('aria-pressed', 'true');
-  await expect.poll(() => stats.getByRole('list', { name: 'Guess distribution' }).getByRole('listitem')
-    .evaluateAll((items) => items.map((item) => item.getAttribute('aria-label')))).toEqual(['1 guess: 1 word', 'Not solved: 0 words']);
+  // One try per word, so In one shows solve times instead of a guess distribution.
+  await expect(stats.getByRole('list', { name: 'Guess distribution' })).toHaveCount(0);
+  await expect(stats.getByRole('img', { name: /^Last 1 word, oldest first: 0:\d\d$/ })).toBeVisible();
+  await expect(stats).toContainText('Solve at least two words to see your spread.');
+  await expect(stats.locator('.stats dl div').filter({ hasText: 'Fastest' }).locator('dd')).toHaveText(/0:\d\d/);
   await expect(stats.getByRole('list', { name: 'Recent words' }).getByRole('listitem').first())
-    .toHaveText(/CHAIR.*Solved.*1 guess/);
+    .toHaveText(/CHAIR.*Solved.*0:\d\d/);
 });
 
 test('a rejected try ends In one with its reason and the answer', async ({ page }) => {

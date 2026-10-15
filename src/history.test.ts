@@ -75,18 +75,55 @@ describe('history summary', () => {
       make(5, { group: 'quickfire-five', result: 'failed', reason: 'invalid', guesses: 0 }),
     ]);
     expect(summary.get('practice')).toEqual({
-      played: 4, solved: 3, guessDistribution: [1, 2, 3, 4, 5].map((guesses) => ({ guesses, count: [0, 1, 2, 0, 0][guesses - 1] })),
+      played: 4, solved: 3, distribution: {
+        by: 'guesses', latest: 2,
+        rows: [...[0, 1, 2, 0, 0].map((count, index) => ({ mark: String(index + 1), label: `${index + 1} ${index ? 'guesses' : 'guess'}`, count })),
+          { mark: '✗', label: 'Not solved', count: 1 }],
+      },
       currentStreak: 2, bestStreak: 2, averageSolveMs: 2000, rounds: null,
     });
     expect(summary.get('quickfire-five')).toMatchObject({ played: 1, solved: 0, currentStreak: 0, bestStreak: 0, averageSolveMs: null });
     expect(summarizeHistory([]).size).toBe(0);
   });
   it('sizes the guess distribution from the preset limit, extending Unlimited to the longest solve', () => {
-    const rows = (group: string, guesses: number[]) => summarizeHistory(guesses.map((count, index) => make(index + 1, { group, guesses: count })))
-      .get(group)!.guessDistribution.map(({ guesses }) => guesses);
-    expect(rows('in-one', [1])).toEqual([1]);
-    expect(rows('sprint', [2])).toEqual([1, 2, 3, 4, 5]);
-    expect(rows('sprint', [2, 8])).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    const summary = (group: string, guesses: number[]) => summarizeHistory(guesses.map((count, index) => make(index + 1, { group, guesses: count })))
+      .get(group)!.distribution;
+    const marks = (group: string, guesses: number[]) => {
+      const distribution = summary(group, guesses);
+      return distribution.by === 'guesses' ? distribution.rows.map(({ mark }) => mark) : [];
+    };
+    expect(marks('practice', [2])).toEqual(['1', '2', '3', '4', '5', '✗']);
+    expect(marks('sprint', [2])).toEqual(['1', '2', '3', '4', '5', '✗']);
+    expect(marks('sprint', [2, 8])).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '✗']);
+  });
+  it('describes one-try presets by solve time: recent trend, fastest, median and a log-normal fit', () => {
+    const inOne = (endedAt: number, durationMs: number, changes: Partial<HistoryRecord> = {}) =>
+      make(endedAt, { group: 'in-one', guesses: 1, durationMs, ...changes });
+    const time = (records: HistoryRecord[]) => {
+      const distribution = summarizeHistory(records).get('in-one')!.distribution;
+      if (distribution.by !== 'time') throw new Error('expected a time distribution');
+      return distribution;
+    };
+    const summary = time([
+      inOne(1, 20_000), inOne(2, 80_000), inOne(3, 5_000, { result: 'failed', reason: 'attempts' }), inOne(4, 40_000), inOne(5, 10_000),
+    ]);
+    expect(summary.recent).toEqual([
+      { durationMs: 20_000, solved: true }, { durationMs: 80_000, solved: true }, { durationMs: 5_000, solved: false },
+      { durationMs: 40_000, solved: true }, { durationMs: 10_000, solved: true }]);
+    expect(summary.solves).toEqual([20_000, 80_000, 40_000, 10_000]);
+    expect(summary.fastestMs).toBe(10_000);
+    expect(summary.medianMs).toBe(30_000);
+    // ln(10, 20, 40, 80 seconds) is evenly spaced around ln(28.28…).
+    expect(Math.exp(summary.fit!.mu)).toBeCloseTo(Math.sqrt(800), 6);
+    expect(summary.fit!.sigma).toBeCloseTo(Math.log(2) * Math.sqrt(5 / 4), 6);
+    // Two solves are needed for a fit; identical times still get a drawable width.
+    expect(time([inOne(1, 30_000)]).fit).toBeNull();
+    expect(time([inOne(1, 30_000), inOne(2, 30_000)]).fit!.sigma).toBe(0.1);
+    expect(time([inOne(1, 5_000, { result: 'failed', reason: 'attempts' })])).toMatchObject({ solves: [], fastestMs: null, medianMs: null, fit: null });
+    // The trend keeps the latest twenty words.
+    const many = time(Array.from({ length: 25 }, (_, index) => inOne(index + 1, (index + 1) * 1000)));
+    expect(many.recent).toHaveLength(20);
+    expect(many.recent[0].durationMs).toBe(6000);
   });
   it('keeps the best streak after a failure resets the current one', () => {
     const results = ['solved', 'solved', 'solved', 'failed', 'solved'] as const;

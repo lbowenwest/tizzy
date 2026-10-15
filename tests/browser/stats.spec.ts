@@ -140,7 +140,7 @@ test('In one charts recent solve times and fits a spread once two words are solv
   await expect(stat(page, 'Fastest')).toHaveText('0:10');
   await expect(dialog.getByRole('img', { name: 'Last 4 words, oldest first: 0:10, 0:40, not solved (1:10), 0:20' })).toBeVisible();
   // ln(10, 20, 40 seconds) has mean ln 20 and spread ln 2 · √(2/3), so one sigma is about 0:11–0:35.
-  await expect(dialog.getByText('About two-thirds of your solves take 0:11–0:35.')).toBeVisible();
+  await expect(dialog.getByText('About two-thirds of your solves take 0:11–0:35 (shaded).')).toBeVisible();
   await expect(recent(page).nth(1)).toHaveText(/CHAIR.*Out of guesses.*1:10/);
 });
 

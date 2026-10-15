@@ -7,13 +7,14 @@ import { recordResult } from './history';
 
 const marks: Record<LetterFeedback, string> = { correct: '✓', present: '↔', absent: '×' };
 const descriptions: Record<LetterFeedback, string> = { correct: 'right place', present: 'elsewhere in word', absent: 'not in word' };
-function Tile({ letter = '', feedback, supplied = false, active = false, unscored = false, ungraded = false }: {
-  letter?: string; feedback?: LetterFeedback; supplied?: boolean; active?: boolean; unscored?: boolean; ungraded?: boolean;
+function Tile({ letter = '', feedback, supplied = false, active = false, unscored = false, rejected = false, ungraded = false }: {
+  letter?: string; feedback?: LetterFeedback; supplied?: boolean; active?: boolean; unscored?: boolean; rejected?: boolean; ungraded?: boolean;
 }) {
   const state = supplied ? 'correct' : feedback;
-  const label = letter ? letter.toUpperCase() + (unscored ? ': unscored; word not in list' : supplied ? ': supplied letter; right place' : ungraded ? ': not scored' : state ? ': ' + descriptions[state] : '') : 'empty';
-  return <span role="img" className={['tile', state, unscored && 'unscored', active && !supplied && 'active', !letter && 'empty'].filter(Boolean).join(' ')} aria-label={label}>
-    {letter.toUpperCase()}{(state || unscored) && <span className="tile-mark" aria-hidden="true">{unscored ? '?' : marks[state!]}</span>}
+  const label = letter ? letter.toUpperCase() + (rejected ? ': not scored; word does not fit the clue' : unscored ? ': unscored; word not in list'
+    : supplied ? ': supplied letter; right place' : ungraded ? ': not scored' : state ? ': ' + descriptions[state] : '') : 'empty';
+  return <span role="img" className={['tile', state, (unscored || rejected) && 'unscored', rejected && 'rejected', active && !supplied && 'active', !letter && 'empty'].filter(Boolean).join(' ')} aria-label={label}>
+    {letter.toUpperCase()}{(state || unscored || rejected) && <span className="tile-mark" aria-hidden="true">{rejected ? '✕' : unscored ? '?' : marks[state!]}</span>}
   </span>;
 }
 
@@ -34,6 +35,11 @@ function Clock({ label, deadline, now, duration }: { label: string; deadline: nu
   </span>;
 }
 
+/** "3 guesses", or "3 tries" for a clue puzzle. */
+function count(value: number, tries: boolean) {
+  return `${value} ${tries ? (value === 1 ? 'try' : 'tries') : value === 1 ? 'guess' : 'guesses'}`;
+}
+
 export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rules }) {
   const [round, setRound] = useState(() => startRound(data, pendingRules));
   const now = useRoundClock(round, setRound);
@@ -48,9 +54,12 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
   const paused = isRoundClockPaused(round);
   const active = round.status === 'playing';
   const retainEntry = round.reason === 'word-time' || round.reason === 'round-time' || round.reason === 'given-up';
-  const first = round.answer[0].toUpperCase();
+  const clue = round.clue;
+  // Clue puzzles supply no first letter.
+  const first = clue ? null : round.answer[0].toUpperCase();
+  const attempt = clue ? 'Try' : 'Guess';
   const maxGuesses = round.rules.maxGuesses;
-  const knowledge = keyboardFeedback(round.guesses);
+  const knowledge = keyboardFeedback(clue ? [clue, ...round.guesses] : round.guesses);
   // Record each finished word; repeat observations and a later round expiry replace, never duplicate.
   useEffect(() => { recordResult(round); }, [round]);
   useEffect(() => {
@@ -69,8 +78,10 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
     const result = submitGuess(round, entry, allowed);
     setRound(result.round);
     setMessage(result.message);
-    // A recorded guess or an unknown word that ends the word leaves no unfinished entry.
-    if (result.round.guesses.length > round.guesses.length || result.round.reason === 'invalid') setEntry('');
+    // A recorded guess or an unknown word that ends the word leaves no unfinished entry. A whole word checked without
+    // counting is cleared too, so the next guess can be typed at once; a short entry stays to finish, and expiry keeps it.
+    if (result.round.guesses.length > round.guesses.length || result.round.reason === 'invalid'
+      || (result.round.status === 'playing' && entry.length === round.length)) setEntry('');
     if (result.round.status === 'playing') focusForPhysicalTyping();
   }
   function abandonWord() {
@@ -133,11 +144,13 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
     const unfinished = retainEntry && entry.length > 0 && index === round.guesses.length;
     const showEntry = editing || unfinished;
     return (
-      <div className="board-row" key={index} role="group" aria-label={`Guess ${index + 1}${guess?.feedback === null ? ': not in word list' : unfinished ? ': not scored' : ''}`}>
+      <div className="board-row" key={index} role="group" aria-label={`${attempt} ${index + 1}${guess?.rejection ? `: rejected; ${guess.rejection}`
+        : guess?.feedback === null ? ': not in word list' : unfinished ? ': not scored' : ''}`}>
         {Array.from({ length: round.length }, (_, column) => {
-          const letter = guess ? guess.word[column] : showEntry ? entry[column] || (column === 0 ? first : '') : '';
-          const supplied = showEntry && column === 0 && (!entry[0] || entry[0] === first);
-          return <Tile key={column} letter={letter} feedback={guess?.feedback?.[column]} unscored={guess?.feedback === null} ungraded={unfinished} supplied={supplied} active={editing} />;
+          const letter = guess ? guess.word[column] : showEntry ? entry[column] || (column === 0 && first ? first : '') : '';
+          const supplied = showEntry && column === 0 && first !== null && (!entry[0] || entry[0] === first);
+          return <Tile key={column} letter={letter} feedback={guess?.feedback?.[column]} unscored={guess?.feedback === null && !guess.rejection}
+            rejected={Boolean(guess?.rejection)} ungraded={unfinished} supplied={supplied} active={editing} />;
         })}
       </div>
     );
@@ -145,6 +158,8 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
   const resultTitle = round.status === 'expired' ? 'Round time is up.' : round.reason === 'word-time' ? 'Word time is up.'
     : round.reason === 'given-up' ? 'Word given up.'
     : round.status === 'won' ? completed ? 'Round complete.' : 'Nicely found.' : 'That one got away.';
+  // A word lost on a rejected try keeps its reason beside the answer.
+  const finalRejection = round.status === 'lost' && round.reason === 'attempts' ? round.guesses.at(-1)?.rejection : undefined;
   const nextLabel = round.status === 'expired' ? 'New round' : sequence && !completed ? round.status === 'won' ? 'Next length' : 'Another ' + round.length + '-letter word' : sequence ? 'New round' : 'Next word';
 
   return (
@@ -154,7 +169,7 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
       </p>}
       <section className="play-area" aria-label="Word puzzle">
         <div className="play-header"><div>
-          <p className="eyebrow">{sequence ? '4 → 5 → 6 ROUND' : 'SINGLE WORD'}</p>
+          <p className="eyebrow">{sequence ? '4 → 5 → 6 ROUND' : clue ? 'SINGLE WORD · CLUE' : 'SINGLE WORD'}</p>
           <h2>Find the {({ 4: 'four', 5: 'five', 6: 'six' })[round.length]}.</h2>
         </div><div className="clock-strip" aria-label="Clocks">
           {round.wordDeadline !== null && <Clock label={round.rules.wordClock.mode === 'guess' ? 'Guess' : 'Word'}
@@ -170,16 +185,22 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
         </ol>}
         <div className="puzzle-meta">
           <span>{maxGuesses === null
-            ? active ? `Guess ${round.guesses.length + 1} · Unlimited` : `${round.guesses.length} ${round.guesses.length === 1 ? 'guess' : 'guesses'} used`
-            : active ? `Guess ${round.guesses.length + 1} of ${maxGuesses}` : `${round.guesses.length} of ${maxGuesses} guesses used`}</span>
-          <span>{round.length} letters · first letter given</span>
+            ? active ? `${attempt} ${round.guesses.length + 1} · Unlimited` : count(round.guesses.length, clue !== null) + ' used'
+            : active ? `${attempt} ${round.guesses.length + 1} of ${maxGuesses}` : `${round.guesses.length} of ${maxGuesses} ${clue ? 'tries' : 'guesses'} used`}</span>
+          <span>{clue ? 'One clue given' : `${round.length} letters · first letter given`}</span>
         </div>
+        {clue && <div className="board clue-board" role="group" aria-label={`Given clue: ${clue.word.toUpperCase()}`}
+          style={{ '--length': round.length } as CSSProperties}>
+          <p className="clue-label" aria-hidden="true">Clue</p>
+          <div className="board-row">{[...clue.word].map((letter, column) => <Tile key={column} letter={letter} feedback={clue.feedback[column]} />)}</div>
+        </div>}
         <div ref={boardRef} className="board" data-unlimited={maxGuesses === null || undefined}
           tabIndex={maxGuesses === null ? 0 : undefined}
           style={{ '--length': round.length } as CSSProperties} role="group" aria-label="Guess board">{rows}</div>
         {maxGuesses === null && round.guesses.length >= 5 && <p className="board-history">Scroll the board to see earlier guesses.</p>}
         {!active && <div className="result" role="status">
           <div><h3>{resultTitle}</h3><p>The word was <strong>{round.answer.toUpperCase()}</strong>.</p>
+            {finalRejection && <p>{round.guesses.at(-1)!.word.toUpperCase()} doesn't fit. {finalRejection}</p>}
             {retainEntry && entry && <p>Last entry was not scored.</p>}
             {paused && !completed && round.roundDeadline !== null && <p>Round timer paused until you continue.</p>}
             {round.reason === 'invalid' && <p>Unknown submitted word: this word has ended.</p>}
@@ -188,14 +209,14 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
           </div>
           <button ref={nextRef} className="primary" onClick={continuePlay}>{nextLabel} <span aria-hidden="true">→</span></button>
         </div>}
-        {active && <p id="feedback" className="feedback" role="status">{message || `Your next guess starts with ${first}.`}</p>}
+        {active && <p id="feedback" className="feedback" role="status">{message || (first ? `Your next guess starts with ${first}.` : 'Only one word fits the clue.')}</p>}
         <div className="legend" aria-label="Letter feedback legend">
           <span><i className="correct" aria-hidden="true">✓</i> Right place</span>
           <span><i className="present" aria-hidden="true">↔</i> Elsewhere</span>
           <span><i className="absent" aria-hidden="true">×</i> Not in word</span>
         </div>
         {active && <>
-          <div className="input-label">Your guess <span>Starts with {first}</span></div>
+          <div className="input-label">Your guess <span>{first ? `Starts with ${first}` : 'Must fit the clue'}</span></div>
           <div ref={entryRef} id="guess-entry" className="guess-display" role="group" tabIndex={0}
             aria-label="Your guess" aria-describedby="current-guess entry-instructions feedback">
             <span id="current-guess" className="guess-value">{entry}</span>
@@ -225,8 +246,7 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
         </>}
         <p className="play-footer">{round.wordDeadline !== null || round.roundDeadline !== null
           ? paused && !completed ? 'Timers paused until you continue.' : 'Clocks keep running during play, including across tabs.'
-          : maxGuesses === null ? 'Unlimited guesses. A fresh word whenever you like.'
-          : `${maxGuesses} ${maxGuesses === 1 ? 'guess' : 'guesses'}. A fresh word whenever you like.`}</p>
+          : `${maxGuesses === null ? `Unlimited ${clue ? 'tries' : 'guesses'}` : count(maxGuesses, clue !== null)}. A fresh word whenever you like.`}</p>
       </section>
     </main>
   );

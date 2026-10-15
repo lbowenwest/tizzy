@@ -272,6 +272,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,.g
 .tile.unscored {
   border-style:dashed;
 }
+.tile.rejected {
+  color:var(--muted);
+  text-decoration:line-through;
+}
+.clue-board {
+  margin-bottom:12px;
+}
+.clue-label {
+  margin:0;
+  font:600 11px "IBM Plex Mono",monospace;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
 .tile-mark {
   position:absolute;
   bottom:2px;

@@ -41,7 +41,7 @@ Themes change colour, typography, borders and shadows only. Selection is immedia
 
 ## Input trial
 
-The supplied first letter is a green hint tile in the active row, labelled as supplied and marked ✓. There is **no separate prefix beside the input**. Following playtesting feedback, both physical typing and on-screen keys enter the **whole word**, including its first letter. Entry starts empty and every typed letter is editable/deletable. If a different first letter is typed, the board shows the actual entry without a green first tile, and checking gives a start-letter reminder without consuming an attempt. Clearing entry restores the hint. Guesses must still start with the supplied letter; that game rule is unchanged. Clue puzzles have no hint tile or start-letter reminder (see [Clue puzzles](#clue-puzzles)).
+The supplied first letter is a green hint tile in the active row, labelled as supplied and marked ✓. There is **no separate prefix beside the input**. Following playtesting feedback, both physical typing and on-screen keys enter the **whole word**, including its first letter. Entry starts empty and every typed letter is editable/deletable. If a different first letter is typed, the board shows the actual entry without a green first tile, and checking gives a start-letter reminder without consuming an attempt. Checking any whole word that doesn't count (the wrong first letter, or an unknown word rejected free) clears the entry so the next guess can be typed straight away; a too-short entry stays to be finished. Clearing entry restores the hint. Guesses must still start with the supplied letter; that game rule is unchanged. Clue puzzles have no hint tile or start-letter reminder (see [Clue puzzles](#clue-puzzles)).
 
 The labelled guess display is focusable but not editable: no native text field or contenteditable surface is used during play, so touching it cannot summon a mobile keyboard. A Wordle-style keyboard uses filled, tall keys, a half-key-indented middle row, and wider ENTER/Delete keys at opposite ends of the bottom row. Physical letters, Backspace, Enter and whole-word paste remain supported, without intercepting browser shortcuts, IME composition, settings fields or open dialogs. Enter on an ordinary focused button retains native activation. Alphabetic input is normalised to uppercase. An incomplete guess receives guidance and costs no attempt. The current guess appears on the board before checking. Keys use the strongest checked feedback (correct over present over absent), with ✓/↔/× marks and accessible descriptions. Confirmed-absent keys turn dark gray, while correct and present keys use the board's theme colours; all keys remain tappable. A letter with any correct or misplaced match cannot be downgraded by excess gray duplicate tiles. Knowledge accumulates only within the current word, survives appearance changes, and clears for each new word, retry or sequence length.
 
@@ -66,7 +66,7 @@ Desktop continuation returns focus to the non-editable guess display. Touch cont
 
 Use native modal dialogs with labelled headings, a close control, Escape dismissal and background inertness.
 
-Settings includes appearance, untimed and ITV-inspired timed presets, round format, word length, guesses per word (1–10 or Unlimited), invalid-word policy, word clock (off/per word/per guess) and editable positive whole-second durations. The independently optional overall clock is available only for sequences. Unknown submitted words can be rejected for free, use one guess, or end the word. A consumed unknown guess appears on the board with dashed tiles and ? marks (unscored, not absent); it gives no letter clues or keyboard updates, and shares a finite guess budget with accepted guesses. Under Unlimited it remains recorded but never exhausts a budget. Sequence length selection is disabled because the sequence starts at four. A **Start with a clue** checkbox is enabled only for single words, like the sequence-only overall clock; its preview names the clue and no first letter. The **Preset** selector loads a preview, not a running game. The preview names the format, guesses per word, clock scopes/durations and unknown-word policy. Further edits mark the draft Custom. Final sprint defaults to Unlimited, with a 90-second overall clock and no word/guess clock; its preview describes unknown words as unscored. The other presets retain a five-guess default. The apply/save controls remain visible outside the dialog's scrolling fields on narrow screens.
+Settings includes appearance, untimed and ITV-inspired timed presets, round format, word length, guesses per word (1–10 or Unlimited), invalid-word policy, word clock (off/per word/per guess) and editable positive whole-second durations. The independently optional overall clock is available only for sequences. Unknown submitted words can be rejected for free, use one guess, or end the word. A consumed unknown guess appears on the board with dashed tiles and ? marks (unscored, not absent); it gives no letter clues or keyboard updates, and shares a finite guess budget with accepted guesses. Under Unlimited it remains recorded but never exhausts a budget. Sequence length selection is disabled because the sequence starts at four. A **Start with a clue** checkbox is enabled only for single words, like the sequence-only overall clock; its preview names the clue and no first letter. The **Preset** selector loads a preview, not a running game. The preview names the format, guesses per word, clock scopes/durations and unknown-word policy. Further edits mark the draft Custom. Final sprint defaults to Unlimited, with a 90-second overall clock and no word/guess clock; its preview describes unknown words as unscored. The other presets retain a five-guess default, except In one's single try. The apply/save controls remain visible outside the dialog's scrolling fields on narrow screens.
 
 Game settings are saved separately from the active round snapshot:
 - **Apply now** is the primary action; it explicitly restarts the whole current round using the previewed rules.
@@ -84,15 +84,24 @@ A **History** header button opens a native modal dialog with the same heading, c
 ```text
 SINGLE WORD · CLUE                                Untimed
 Find the five.
-Try 1 of 3                                One clue given
+Try 1 of 1                                One clue given
 Clue           [C↔][R×][A✓][N×][E×]          labelled, not a guess
-                 [S][T][A][I][R]              rejected: grey, struck, ✕ mark
-                 [ ][ ][ ][ ][ ]               active row: no hint tile
+                 [ ][ ][ ][ ][ ]               the one try: no hint tile
+Only one word fits the clue.
+```
+
+With custom tries, a rejected row stays on the board (`[S][T][A][I][R]` grey, struck, ✕ mark) above the next row:
+
+```text
+Try 2 of 3                                One clue given
+Clue           [C↔][R×][A✓][N×][E×]
+                 [S][T][A][I][R]              rejected
+                 [ ][ ][ ][ ][ ]               active row
                  [ ][ ][ ][ ][ ]
 Rejected: STAIR doesn't fit. C must appear, but not 1st.
 ```
 
-The clue row sits above the guess rows with a visible **Clue** label and an accessible name such as "Given clue: CRANE", with ordinary tile marks. It is never the active row and does not count toward the try counter, which reads **Try n of N** (or **Try n · Unlimited**). Every tile in the active row starts empty; the feedback line invites any word instead of naming a start letter, and the meta line reads **One clue given**. A rejected try fills a row with unscored, struck tiles and a ✕ mark (distinct from the ? of an unknown word); the row's accessible name includes its reason, and the reason is announced through the feedback status. The keyboard starts with the clue's evidence and rejected rows never change it. Results, Give up and continuation are unchanged. The layout must still fit 320px with the extra row, scrolling vertically if needed.
+The clue row sits above the guess rows with a visible **Clue** label and an accessible name such as "Given clue: CRANE", with ordinary tile marks. It is never the active row and does not count toward the try counter, which reads **Try n of N** (or **Try n · Unlimited**). Every tile in the active row starts empty; the feedback line invites any word instead of naming a start letter, and the meta line reads **One clue given**. A rejected try fills a row with unscored, struck tiles and a ✕ mark (distinct from the ? of an unknown word); the row's accessible name includes its reason, and the reason is announced through the feedback status. The keyboard starts with the clue's evidence and rejected rows never change it. The In one preset has one try, so its board is a single row under the clue. A word lost on a rejected try shows that word and its reason below the revealed answer; Give up and continuation are unchanged. The layout must still fit 320px with the extra row, scrolling vertically if needed.
 
 ### Clock presentation
 
@@ -119,6 +128,6 @@ Playwright covers real tap events in touch-emulated Chromium, rather than only r
 
 ## Current implementation boundary
 
-The React frontend implements untimed/timed single-word and sequence play, all three invalid-word policies, independent clock scopes, the three themes, editable presets, local persistence and device-local History. Clue puzzles are specified but not yet implemented (see [plan.md](plan.md#in-one-clue-puzzles)). See [design.md](design.md#presets-and-background-behaviour) for the preset table, TV timing evidence and solo adaptation boundaries. Older preferences gain the five-guess default without losing their existing choices or clocks; explicitly saved limits are not silently replaced. Select Final sprint again and Apply now to use its new unlimited default. Unlimited choices persist and restore like finite limits.
+The React frontend implements untimed/timed single-word and sequence play, all three invalid-word policies, independent clock scopes, the three themes, editable presets, local persistence and device-local History. It also implements In one clue puzzles. See [design.md](design.md#presets-and-background-behaviour) for the preset table, TV timing evidence and solo adaptation boundaries. Older preferences gain the five-guess default without losing their existing choices or clocks; explicitly saved limits are not silently replaced. Select Final sprint again and Apply now to use its new unlimited default. Unlimited choices persist and restore like finite limits.
 
 The isolated prototype's frozen clocks remain visual examples, not the production timing implementation. Physical-device Safari/native-keyboard testing remains outstanding; controlled-time Chromium tests cover background catch-up and expiry guards.

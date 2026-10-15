@@ -79,10 +79,10 @@ describe('presets', () => {
       expect(preset.rules).toMatchObject({ maxGuesses: 5, clue: false });
     }
   });
-  it('makes In one an untimed five-letter clue puzzle with three tries', () => {
+  it('makes In one an untimed five-letter clue puzzle with one try', () => {
     const inOne = presets.find(({ key }) => key === 'in-one')!;
-    expect(inOne.rules).toEqual({ ...defaultRules, maxGuesses: 3, clue: true });
-    expect(describeRules(inOne.rules)).toBe('5 letters · Starts with a clue only the answer fits; no first letter · 3 guesses per word · Untimed · Unknown words are free to reject');
+    expect(inOne.rules).toEqual({ ...defaultRules, maxGuesses: 1, clue: true });
+    expect(describeRules(inOne.rules)).toBe('5 letters · Starts with a clue only the answer fits; no first letter · 1 guess per word · Untimed · Unknown words are free to reject');
   });
   it('shares the ordinary editable configuration path and round-trips through storage', () => {
     for (const preset of presets) {

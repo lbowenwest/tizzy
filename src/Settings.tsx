@@ -75,6 +75,11 @@ export function Settings({ preferences, onTheme, onSave, onClose }: {
               </select>
             </div>
           </div>
+          <label className="round-clock-toggle" htmlFor="clue">
+            <input id="clue" type="checkbox" checked={rules.clue && rules.format === 'single'} disabled={rules.format !== 'single'}
+              onChange={(event) => change({ clue: event.target.checked })} />
+            Start with a clue
+          </label>
           <div className="field"><label htmlFor="guesses">Guesses per word</label>
             <select id="guesses" value={rules.maxGuesses ?? 'unlimited'}
               onChange={(event) => change({ maxGuesses: event.target.value === 'unlimited' ? null : Number(event.target.value) })}>
@@ -113,7 +118,7 @@ export function Settings({ preferences, onTheme, onSave, onClose }: {
                 onChange={(event) => { setRoundSeconds(event.target.value); setPreset('custom'); }} />
             </div>
           </fieldset>
-          <p className="settings-footnote">First letter supplied. During play, clocks keep running in the background and while dialogs are open. Solves and Give up pause the round timer until you continue. A spent guess resets per-guess time; a free rejection does not. ITV-style presets adapt the timing for solo practice, without teams or prizes.</p>
+          <p className="settings-footnote">First letter supplied, except with a clue: then one checked word is given that only the answer fits, and words that don't fit are rejected with the reason, using a guess. During play, clocks keep running in the background and while dialogs are open. Solves and Give up pause the round timer until you continue. A spent guess resets per-guess time; a free rejection does not. ITV-style presets adapt the timing for solo practice, without teams or prizes.</p>
         </div>
         <div className="settings-apply">
           <div className="settings-actions">

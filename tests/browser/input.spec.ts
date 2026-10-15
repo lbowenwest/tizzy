@@ -33,10 +33,13 @@ test('the first letter is a hint, not an undeletable input prefix', async ({ pag
   await submit(page, 'SHARE');
   await expect(page.getByRole('status')).toContainText('Start with C');
   await expect(page.getByText('Guess 1 of 5')).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Guess 1', exact: true }).getByRole('img', { name: 'S', exact: true })).toBeVisible();
+  // A whole word that doesn't count is cleared so the next guess can be typed at once.
+  await expect(input(page)).toHaveText('Tap letters below');
+  await expect(page.getByRole('img', { name: 'C: supplied letter; right place' })).toBeVisible();
   await submit(page, 'CHAI');
   await expect(page.getByRole('status')).toContainText('Enter all 5');
   await expect(page.getByText('Guess 1 of 5')).toBeVisible();
+  await expect(input(page)).toHaveText('CHAI');
 });
 
 for (const theme of ['letterpress', 'afterhours', 'club']) {

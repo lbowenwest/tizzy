@@ -23,7 +23,7 @@ export const presets: readonly { key: string; label: string; rules: Rules }[] = 
   },
   {
     key: 'in-one', label: 'In one · 5 letters',
-    rules: { ...copyRules(defaultRules), maxGuesses: 3, clue: true },
+    rules: { ...copyRules(defaultRules), maxGuesses: 1, clue: true },
   },
 ];
 

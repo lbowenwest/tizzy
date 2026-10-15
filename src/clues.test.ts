@@ -18,6 +18,7 @@ const data: WordData = {
   clues: { 4: [], 5: [{ answer: 'chair', clues: ['cargo', 'scarf'] }, { answer: 'cheap', clues: ['eerie'] }], 6: [] },
 };
 const inOne: Rules = presets.find(({ key }) => key === 'in-one')!.rules;
+const threeTries: Rules = { ...inOne, maxGuesses: 3 };
 const allowed = new Set(data.guesses[5]);
 const random = () => 0;
 
@@ -29,13 +30,15 @@ describe('clue rounds', () => {
     expect(keyboardFeedback([round.clue!])).toEqual(new Map([['c', 'correct'], ['a', 'present'], ['r', 'present'], ['g', 'absent'], ['o', 'absent']]));
     const result = submitGuess(round, 'STAIR', allowed, 1);
     expect(result.round.guesses).toEqual([{ word: 'stair', feedback: null, rejection: '1st letter must be C.' }]);
-    expect(result.round.status).toBe('playing');
+    // In one has a single try, so one rejection loses the word.
+    expect(result.round).toMatchObject({ status: 'lost', reason: 'attempts' });
     expect(result.message).toBe("Rejected: STAIR doesn't fit. 1st letter must be C.");
     expect(keyboardFeedback(result.round.guesses)).toEqual(new Map());
   });
 
   it('solve on the answer and lose when every try is rejected', () => {
-    const round = startRound(data, inOne, undefined, random, 0);
+    expect(submitGuess(startRound(data, inOne, undefined, random, 0), 'chair', allowed, 1).round).toMatchObject({ status: 'won' });
+    const round = startRound(data, threeTries, undefined, random, 0);
     const solved = submitGuess(submitGuess(round, 'cabin', allowed, 1).round, 'chair', allowed, 2).round;
     expect(solved).toMatchObject({ status: 'won', endedAt: 2 });
     expect(solved.guesses.map(({ word, feedback }) => [word, feedback?.length ?? null])).toEqual([['cabin', null], ['chair', 5]]);
@@ -53,7 +56,7 @@ describe('clue rounds', () => {
   });
 
   it('treat a rejection as a spent attempt for per-guess time, and keep Give up for unlimited tries', () => {
-    const timed = startRound(data, { ...inOne, wordClock: { mode: 'guess', seconds: 10 } }, undefined, random, 0);
+    const timed = startRound(data, { ...threeTries, wordClock: { mode: 'guess', seconds: 10 } }, undefined, random, 0);
     const rejected = submitGuess(timed, 'cabin', allowed, 4000).round;
     expect(rejected.wordDeadline).toBe(14000);
     expect(advanceClock(rejected, 13999).status).toBe('playing');
@@ -85,7 +88,7 @@ describe('clue rounds', () => {
   });
 
   it('record rejected tries as guesses, not unknown words, under In one', () => {
-    let round = startRound(data, { ...inOne, invalid: 'consume' }, undefined, random, 0);
+    let round = startRound(data, { ...threeTries, invalid: 'consume' }, undefined, random, 0);
     for (const word of ['cabin', 'zzzzz', 'chair']) round = submitGuess(round, word, allowed, 5).round;
     expect(toRecord(round)).toMatchObject({ group: 'custom', result: 'solved', guesses: 3, unknown: 1 });
     const preset = submitGuess(startRound(data, inOne, undefined, random, 0), 'chair', allowed, 5).round;

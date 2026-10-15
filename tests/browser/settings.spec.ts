@@ -18,32 +18,29 @@ async function guess(page: Page, word: string) {
   await page.keyboard.press('Enter');
 }
 
-test('unlimited practice can give up by keyboard without clearing guesses or applying pending rules early', async ({ page }) => {
+test('the final can give up by keyboard without clearing guesses or applying pending rules early', async ({ page }) => {
   await fixture(page);
   await expect(page.getByRole('button', { name: 'Give up', exact: true })).toHaveCount(0);
   let dialog = await settings(page);
-  await dialog.getByLabel('Guesses per word').selectOption('unlimited');
-  await dialog.getByRole('button', { name: 'Save for next round' }).click();
-  await expect(page.getByRole('button', { name: 'Give up', exact: true })).toHaveCount(0);
-  await guess(page, 'CHAIR');
-  await page.getByRole('button', { name: 'Next word', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Give up', exact: true })).toBeVisible();
-  await guess(page, 'CARGO');
-  await enterWord(page, 'CHA');
+  await dialog.getByLabel('Preset', { exact: true }).selectOption('final');
+  await dialog.getByRole('button', { name: 'Apply now', exact: true }).click();
+  await guess(page, 'COAT');
+  await enterWord(page, 'CA');
   dialog = await settings(page);
-  await dialog.getByLabel('Guesses per word').selectOption('3');
+  await dialog.getByLabel('Preset', { exact: true }).selectOption('practice');
   await dialog.getByRole('button', { name: 'Save for next round' }).click();
   await page.getByRole('button', { name: 'Give up', exact: true }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('status')).toContainText('Word given up');
-  await expect(page.getByRole('status')).toContainText('CHAIR');
+  await expect(page.getByRole('status')).toContainText('CAMP');
   await expect(page.getByRole('group', { name: 'Guess 1', exact: true })).toContainText('C');
-  await expect(page.getByRole('group', { name: 'Guess 2: not scored', exact: true })).toHaveText('C✓HA');
+  await expect(page.getByRole('group', { name: 'Guess 2: not scored', exact: true })).toHaveText('C✓A');
   await expect(page.getByText('1 guess used', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Give up', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Next word', exact: true }).click();
-  await expect(page.getByText('Guess 1 of 3')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Give up', exact: true })).toHaveCount(0);
+  // The saved preset waits for the sequence to finish.
+  await page.getByRole('button', { name: 'Another 4-letter word', exact: true }).click();
+  await expect(page.getByText('Guess 1 · Unlimited', { exact: true })).toBeVisible();
+  await expect(page.locator('.pending-settings')).toContainText('5 letters');
 });
 
 test('preset selection is a preview and Apply now explicitly starts those rules', async ({ page }) => {
@@ -67,39 +64,33 @@ test('preset selection is a preview and Apply now explicitly starts those rules'
   await expect(page.getByRole('group', { name: 'Your guess', exact: true })).toHaveText('Tap letters below');
 });
 
-test('saving a guess limit preserves current play, signals the pending rules and persists them', async ({ page }) => {
+test('saving a preset preserves current play, signals the pending rules and persists them', async ({ page }) => {
   await fixture(page);
   await guess(page, 'CARGO');
-  const dialog = await settings(page);
-  await dialog.getByLabel('Guesses per word').selectOption('3');
-  await dialog.getByLabel('Unknown submitted word').selectOption('consume');
-  await expect(dialog.getByLabel('Preset', { exact: true })).toHaveValue('custom');
+  let dialog = await settings(page);
+  await dialog.getByLabel('Preset', { exact: true }).selectOption('practice-six');
   await dialog.getByRole('button', { name: 'Save for next round' }).click();
-  await expect(page.locator('.pending-settings')).toContainText('3 guesses per word');
+  await expect(page.locator('.pending-settings')).toContainText('6 letters');
+  await expect(page.getByRole('heading', { name: 'Find the five.' })).toBeVisible();
   await expect(page.getByText('Guess 2 of 5')).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Guess board' }).locator('.board-row')).toHaveCount(5);
   await guess(page, 'CHAIR');
   await page.getByRole('button', { name: 'Next word', exact: true }).click();
   await expect(page.locator('.pending-settings')).toHaveCount(0);
-  await expect(page.getByText('Guess 1 of 3')).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Guess board' }).locator('.board-row')).toHaveCount(3);
+  await expect(page.getByRole('heading', { name: 'Find the six.' })).toBeVisible();
   await page.reload();
-  for (let index = 0; index < 3; index++) await guess(page, 'CZZZZ');
-  await expect(page.getByText('3 of 3 guesses used')).toBeVisible();
-  await expect(page.getByRole('status')).toContainText('That one got away');
+  await expect(page.getByRole('heading', { name: 'Find the six.' })).toBeVisible();
+  dialog = await settings(page);
+  await expect(dialog.getByLabel('Preset', { exact: true })).toHaveValue('practice-six');
 });
 
 test('the final previews, saves and restores unlimited guesses without changing the other presets', async ({ page }) => {
   await fixture(page);
   let dialog = await settings(page);
   await dialog.getByLabel('Preset', { exact: true }).selectOption('final');
-  await expect(dialog.getByLabel('Guesses per word')).toHaveValue('unlimited');
-  await expect(dialog.getByRole('region', { name: 'Settings preview' })).toContainText('Unlimited guesses per word');
-  await expect(dialog.getByRole('region', { name: 'Settings preview' })).toContainText('90 seconds overall');
-  await expect(dialog.getByRole('region', { name: 'Settings preview' })).toContainText('Unknown words are unscored');
-  await dialog.getByLabel('Guesses per word').selectOption('3');
-  await expect(dialog.getByLabel('Preset', { exact: true })).toHaveValue('custom');
-  await dialog.getByLabel('Preset', { exact: true }).selectOption('final');
+  const preview = dialog.getByRole('region', { name: 'Settings preview' });
+  await expect(preview).toContainText('Unlimited guesses per word');
+  await expect(preview).toContainText('90 seconds overall');
+  await expect(preview).toContainText('Unknown words are unscored');
   await dialog.getByRole('button', { name: 'Save for next round' }).click();
   await expect(page.getByText('Guess 1 of 5')).toBeVisible();
   await expect(page.locator('.pending-settings')).toContainText('Unlimited guesses per word');
@@ -108,69 +99,68 @@ test('the final previews, saves and restores unlimited guesses without changing 
   await expect(page.getByRole('timer', { name: 'Round time remaining' })).toBeVisible();
   dialog = await settings(page);
   await expect(dialog.getByLabel('Preset', { exact: true })).toHaveValue('final');
-  await expect(dialog.getByLabel('Guesses per word')).toHaveValue('unlimited');
   await dialog.getByLabel('Preset', { exact: true }).selectOption('itv-five');
-  await expect(dialog.getByLabel('Guesses per word')).toHaveValue('5');
+  await expect(dialog.getByRole('region', { name: 'Settings preview' })).toContainText('5 guesses per word');
   await dialog.getByRole('button', { name: 'Apply now', exact: true }).click();
   await expect(page.getByText('Guess 1 of 5')).toBeVisible();
 });
 
-test('editing a preset marks it custom and selecting another restores its default guess budget', async ({ page }) => {
+test('settings offer presets only, including practice at every length', async ({ page }) => {
   await fixture(page);
   const dialog = await settings(page);
-  await dialog.getByLabel('Preset', { exact: true }).selectOption('itv-five');
-  await dialog.getByLabel('Guesses per word').selectOption('6');
-  await expect(dialog.getByLabel('Preset', { exact: true })).toHaveValue('custom');
-  await expect(dialog.getByRole('region', { name: 'Settings preview' })).toContainText('6 guesses per word');
-  await dialog.getByLabel('Preset', { exact: true }).selectOption('practice');
-  await expect(dialog.getByLabel('Guesses per word')).toHaveValue('5');
-  await expect(dialog.getByRole('region', { name: 'Settings preview' })).toContainText('Untimed');
+  await expect(dialog.getByRole('combobox')).toHaveCount(2);
+  await expect(dialog.getByRole('checkbox')).toHaveCount(0);
+  await expect(dialog.getByRole('spinbutton')).toHaveCount(0);
+  await expect(dialog.getByLabel('Preset', { exact: true }).getByRole('option')).toHaveText([
+    'Practice · 4 letters', 'Practice · 5 letters', 'Practice · 6 letters', '4 → 5 → 6 · untimed',
+    'ITV-style · 4 letters', 'ITV-style · 5 letters', 'Final sprint · 90 seconds', 'In one · 5 letters',
+  ]);
+  await expect(dialog.getByLabel('Preset', { exact: true })).toHaveValue('practice');
+  await dialog.getByLabel('Preset', { exact: true }).selectOption('practice-four');
+  await expect(dialog.getByRole('region', { name: 'Settings preview' })).toHaveText(/4 letters · 5 guesses per word · Untimed/);
   await dialog.getByRole('button', { name: 'Apply now', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
   await expect(page.getByRole('timer')).toHaveCount(0);
 });
 
-test('a saved guess count waits for sequence completion, including same-length retries', async ({ page }) => {
+test('a saved preset waits for sequence completion, including same-length retries', async ({ page }) => {
   await fixture(page);
   let dialog = await settings(page);
   await dialog.getByLabel('Preset', { exact: true }).selectOption('sequence');
-  await dialog.getByLabel('Guesses per word').selectOption('1');
   await dialog.getByRole('button', { name: 'Apply now', exact: true }).click();
   dialog = await settings(page);
-  await dialog.getByLabel('Guesses per word').selectOption('6');
+  await dialog.getByLabel('Preset', { exact: true }).selectOption('final');
   await dialog.getByRole('button', { name: 'Save for next round' }).click();
-  await guess(page, 'COAT');
-  await expect(page.getByText('1 of 1 guesses used')).toBeVisible();
+  for (let index = 0; index < 5; index++) await guess(page, 'COAT');
+  await expect(page.getByText('5 of 5 guesses used')).toBeVisible();
   await page.getByRole('button', { name: 'Another 4-letter word' }).click();
   for (const word of ['CAMP', 'CHAIR', 'CASTLE']) {
-    await expect(page.getByText('Guess 1 of 1')).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Guess board' }).locator('.board-row')).toHaveCount(1);
+    await expect(page.getByText('Guess 1 of 5')).toBeVisible();
+    await expect(page.locator('.pending-settings')).toBeVisible();
     await guess(page, word);
     await page.getByRole('button', { name: word === 'CASTLE' ? 'New round' : 'Next length', exact: true }).click();
   }
-  await expect(page.getByText('Guess 1 of 6')).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Guess board' }).locator('.board-row')).toHaveCount(6);
+  await expect(page.getByText('Guess 1 · Unlimited', { exact: true })).toBeVisible();
   await expect(page.locator('.pending-settings')).toHaveCount(0);
 });
 
 test.describe('mobile settings', () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { width: 320, height: 667 } });
   for (const theme of ['letterpress', 'afterhours', 'club']) {
-    test(`${theme} apply actions stay visible and ten-guess play remains scrollable without text entry`, async ({ page }, testInfo) => {
+    test(`${theme} apply actions stay visible and play continues without text entry`, async ({ page }, testInfo) => {
       await fixture(page);
       const dialog = await settings(page);
       await dialog.getByLabel('Appearance', { exact: true }).selectOption(theme);
       await expect(dialog.getByRole('region', { name: 'Settings preview' })).toBeInViewport({ ratio: 1 });
-      await page.screenshot({ path: testInfo.outputPath(`preset-${theme}-320.png`), fullPage: true });
-      await dialog.getByLabel('Guesses per word').scrollIntoViewIfNeeded();
-      await dialog.getByLabel('Guesses per word').selectOption('10');
+      await dialog.getByLabel('Preset', { exact: true }).selectOption('practice-six');
       const apply = dialog.getByRole('button', { name: 'Apply now', exact: true });
       await expect(apply).toBeInViewport();
       await page.screenshot({ path: testInfo.outputPath(`settings-${theme}-320.png`), fullPage: true });
       await apply.tap();
-      await expect(page.getByRole('group', { name: 'Guess board' }).locator('.board-row')).toHaveCount(10);
+      await expect(page.getByRole('group', { name: 'Guess board' }).locator('.board-row')).toHaveCount(5);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await expect(page.locator('.play-area input, .play-area textarea, .play-area [contenteditable="true"]')).toHaveCount(0);
-      for (const letter of 'CHAIR') await page.getByRole('button', { name: letter, exact: true }).tap();
+      for (const letter of 'CASTLE') await page.getByRole('button', { name: letter, exact: true }).tap();
       await page.getByRole('button', { name: 'Check guess' }).tap();
       await expect(page.getByRole('status')).toContainText('Nicely found');
     });

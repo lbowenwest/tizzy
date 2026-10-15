@@ -36,23 +36,24 @@ describe('history records', () => {
       .toMatchObject({ group: 'final', format: 'sequence', reason: 'round-time' });
     const unknown = submitGuess(start(preset('final')), 'czzz', allowed(4), 2000).round;
     expect(toRecord(giveUp(unknown, 3000))).toMatchObject({ reason: 'given-up', guesses: 1, unknown: 1, durationMs: 2000 });
+    // Rules no preset uses have no group, so they are not recorded.
     const custom = submitGuess(start({ ...preset('practice'), maxGuesses: 6 }), 'chair', allowed(5), 2000).round;
-    expect(toRecord(custom)).toMatchObject({ group: 'custom', result: 'solved' });
+    expect(toRecord(custom)).toBeNull();
   });
   it('does not record a word still in play', () => {
     expect(toRecord(start(preset('practice')))).toBeNull();
     expect(toRecord(submitGuess(start(preset('practice')), 'cargo', allowed(5), 2000).round)).toBeNull();
   });
-  it('upserts by word, replacing a failed sequence word with its later round expiry', () => {
-    const rules = { ...preset('sequence'), invalid: 'fail' as const, roundSeconds: 10 };
-    const failed = submitGuess(start(rules), 'czzz', allowed(4), 2000).round;
-    const once = addRecord([], toRecord(failed)!);
-    expect(addRecord(once, toRecord(failed)!)).toEqual(once);
-    const expired = addRecord(once, toRecord(advanceClock(failed, 11000))!);
-    expect(expired).toHaveLength(1);
-    expect(expired[0]).toMatchObject({ id: once[0].id, result: 'failed', reason: 'round-time', endedAt: 11000 });
-    const retry = advanceClock(nextWord(failed, data, rules, () => 0, 5000), 11000);
-    expect(toRecord(retry)).toMatchObject({ id: '5000:camp', roundId: 1000, reason: 'round-time' });
+  it('upserts by word, so a later result for the same word replaces the earlier one', () => {
+    const failed = make(2, { format: 'sequence', group: 'final', result: 'failed', reason: 'attempts' });
+    const once = addRecord([], failed);
+    expect(addRecord(once, failed)).toEqual(once);
+    expect(addRecord(once, { ...failed, reason: 'round-time', endedAt: 11 })).toEqual([{ ...failed, reason: 'round-time', endedAt: 11 }]);
+  });
+  it('keeps the round id across a sequence retry', () => {
+    // Giving up pauses the final's clock, so 89 seconds remain after the retry starts.
+    const retry = nextWord(giveUp(start(preset('final')), 2000), data, preset('final'), () => 0, 5000);
+    expect(toRecord(advanceClock(retry, 95000))).toMatchObject({ id: '5000:camp', roundId: 1000, reason: 'round-time' });
   });
   it('keeps the newest 1,000 records in finish order', () => {
     expect(addRecord([make(5)], make(3)).map(({ endedAt }) => endedAt)).toEqual([3, 5]);
@@ -92,11 +93,11 @@ describe('history summary', () => {
       sequence(1, 1, 4), sequence(2, 1, 5), sequence(3, 1, 6),
       sequence(4, 2, 4, { result: 'failed', reason: 'attempts' }), sequence(5, 2, 4, { result: 'failed', reason: 'round-time' }),
       sequence(6, 3, 4),
-      make(7, { group: 'custom', length: 6, answer: 'castle' }),
-      make(8, { group: 'custom', format: 'sequence', roundId: 8, result: 'failed', reason: 'round-time' }),
+      make(7, { group: 'sequence', length: 6, answer: 'castle' }),
+      make(8, { group: 'sequence', format: 'sequence', roundId: 8, result: 'failed', reason: 'round-time' }),
     ]);
     expect(summary.get('final')).toMatchObject({ played: 6, rounds: { completed: 1, expired: 1 } });
-    expect(summary.get('custom')).toMatchObject({ played: 2, rounds: { completed: 0, expired: 1 } });
+    expect(summary.get('sequence')).toMatchObject({ played: 2, rounds: { completed: 0, expired: 1 } });
   });
 });
 
@@ -110,6 +111,8 @@ describe('history storage parsing', () => {
     const records = [make(1), { ...make(2), answer: 'CHAIR' }, { ...make(3), reason: 'attempts' },
       { ...make(4), result: 'failed', reason: 'unknown' }, { ...make(5), unknown: 9 }, { ...make(6), length: 7 },
       { ...make(7), group: '' }, { ...make(8), durationMs: -1 }, null, 'chair'];
+    // Words from custom settings and retired presets are dropped too.
+    records.push({ ...make(9), group: 'custom' }, { ...make(10), group: 'retired' });
     expect(parseHistory(JSON.stringify({ version: 1, records }))).toEqual([make(1)]);
   });
   it('recovers from missing, corrupt and other-version storage', () => {

@@ -13,9 +13,7 @@ async function fixture(page: Page, preferences?: object) {
   await page.goto('/');
   await expect(page.getByLabel('Your guess', { exact: true })).toBeVisible();
 }
-const inOne = { theme: 'letterpress', rules: { format: 'single', length: 5, invalid: 'reject', maxGuesses: 1,
-  wordClock: { mode: 'off', seconds: 10 }, roundSeconds: null, clue: true } };
-const threeTries = { ...inOne, rules: { ...inOne.rules, maxGuesses: 3 } };
+const inOne = { theme: 'letterpress', preset: 'in-one' };
 async function guess(page: Page, word: string) {
   await enterWord(page, word);
   await page.getByLabel('Your guess', { exact: true }).press('Enter');
@@ -26,7 +24,6 @@ test('In one starts from the clue with one row, no first letter and one try', as
   await fixture(page);
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await page.getByRole('dialog').getByLabel('Preset').selectOption('in-one');
-  await expect(page.getByRole('dialog').getByLabel('Start with a clue')).toBeChecked();
   await page.getByRole('button', { name: 'Apply now' }).click();
 
   const clue = page.getByRole('group', { name: 'Given clue: CARGO' });
@@ -67,33 +64,6 @@ test('a rejected try ends In one with its reason and the answer', async ({ page 
   const rejected = page.getByRole('group', { name: 'Try 1: rejected; 1st letter must be C.' });
   await expect(rejected.getByRole('img')).toHaveText(['S✕', 'T✕', 'A✕', 'I✕', 'R✕']);
   await expect(rejected.getByRole('img').first()).toHaveAccessibleName('S: not scored; word does not fit the clue');
-});
-
-test('custom tries continue after a rejection until they run out', async ({ page }) => {
-  await fixture(page, threeTries);
-  await expect(page.getByRole('group', { name: 'Guess board' }).getByRole('group')).toHaveCount(3);
-  await guess(page, 'CABIN');
-  await expect(page.getByRole('status')).toHaveText("Rejected: CABIN doesn't fit. A must appear, but not 2nd.");
-  await expect(page.getByText('Try 2 of 3')).toBeVisible();
-  for (const letter of 'BIN') await expect(key(page, letter)).not.toHaveClass(/correct|present|unavailable/);
-  for (const word of ['CHEER', 'SHEEP']) await guess(page, word);
-  await expect(page.getByRole('status')).toContainText("SHEEP doesn't fit. 1st letter must be C.");
-  await expect(page.getByRole('status')).toContainText('The word was CHAIR.');
-  await expect(page.getByText('3 of 3 tries used')).toBeVisible();
-  await expect(page.getByRole('group', { name: /^Try 3: rejected; / })).toBeVisible();
-});
-
-test('the clue setting only applies to single words', async ({ page }) => {
-  await fixture(page, inOne);
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  const settings = page.getByRole('dialog');
-  await expect(settings.getByLabel('Start with a clue')).toBeEnabled();
-  await settings.getByLabel('Round format').selectOption('sequence');
-  await expect(settings.getByLabel('Start with a clue')).toBeDisabled();
-  await expect(settings.getByLabel('Start with a clue')).not.toBeChecked();
-  await settings.getByRole('button', { name: 'Apply now' }).click();
-  await expect(page.getByText('4 letters · first letter given')).toBeVisible();
-  await expect(page.getByRole('group', { name: /^Given clue/ })).toHaveCount(0);
 });
 
 for (const width of [320, 390]) {

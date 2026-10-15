@@ -27,63 +27,77 @@ async function guess(page: Page, word: string) {
   await page.getByLabel('Your guess', { exact: true }).press('Enter');
 }
 const guessClock = (page: Page) => page.getByRole('timer', { name: 'Guess time remaining' });
-const wordClock = (page: Page) => page.getByRole('timer', { name: 'Word time remaining' });
 const roundClock = (page: Page) => page.getByRole('timer', { name: 'Round time remaining' });
 const bar = (page: Page, label: string) => page.getByRole('progressbar', { name: label + ' time remaining' });
 
-for (const scope of ['guess', 'word', 'round'] as const) {
-  test(`${scope} expiry preserves checked and unknown guesses plus the unfinished row until continuation`, async ({ page }) => {
-    await fixture(page);
-    const dialog = await openSettings(page);
-    await dialog.getByLabel('Preset').selectOption('sequence');
-    await dialog.getByLabel('Unknown submitted word').selectOption('consume');
-    if (scope !== 'round') {
-      await dialog.getByLabel('Word clock', { exact: true }).selectOption(scope);
-      await dialog.getByLabel('Word / guess seconds').fill('10');
-    } else {
-      await dialog.getByLabel('Overall sequence clock').check();
-      await dialog.getByLabel('Round seconds').fill('10');
-    }
-    await dialog.getByRole('button', { name: 'Apply now' }).click();
-    await guess(page, 'COAT');
-    await guess(page, 'CZZZ');
-    await enterWord(page, 'CAM');
-    const checked = page.getByRole('group', { name: 'Guess 1', exact: true });
-    const unknown = page.getByRole('group', { name: 'Guess 2: not in word list', exact: true });
-    await expect(checked.getByRole('img', { name: 'C: right place', exact: true })).toBeVisible();
-    await expect(unknown.getByRole('img', { name: 'Z: unscored; word not in list' })).toHaveCount(3);
-    await page.clock.fastForward(10000);
-    await expect(page.getByRole('status')).toContainText(scope === 'round' ? 'Round time is up' : 'Word time is up');
-    await expect(checked.getByRole('img', { name: 'C: right place', exact: true })).toBeVisible();
-    await expect(checked.getByRole('img', { name: 'A: elsewhere in word', exact: true })).toBeVisible();
-    await expect(unknown.getByRole('img', { name: 'Z: unscored; word not in list' })).toHaveCount(3);
-    const unfinished = page.getByRole('group', { name: 'Guess 3: not scored', exact: true });
-    await expect(unfinished).toHaveText('C✓AM');
-    await expect(unfinished.getByRole('img', { name: 'A: not scored', exact: true })).toBeVisible();
-    await expect(page.getByText('2 of 5 guesses used')).toBeVisible();
-    await expect(page.getByRole('status')).toContainText('Last entry was not scored');
-    await page.clock.runFor(20000);
-    await expect(unfinished).toHaveText('C✓AM');
-    await page.getByRole('button', { name: scope === 'round' ? 'New round' : 'Another 4-letter word', exact: true }).click();
-    await expect(page.getByText('Guess 1 of 5')).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Guess 3', exact: true })).toHaveText('');
-  });
-}
-
-test('round expiry after an unknown word ends the word does not show that word as an unfinished entry', async ({ page }) => {
+test('guess expiry preserves checked guesses plus the unfinished row until the next word', async ({ page }) => {
   await fixture(page);
-  const dialog = await openSettings(page);
-  await dialog.getByLabel('Preset').selectOption('sequence');
-  await dialog.getByLabel('Unknown submitted word').selectOption('fail');
-  await dialog.getByLabel('Overall sequence clock').check();
-  await dialog.getByLabel('Round seconds').fill('10');
-  await dialog.getByRole('button', { name: 'Apply now' }).click();
+  await preset(page, 'itv-four');
+  await guess(page, 'COAT');
+  await enterWord(page, 'CAM');
+  const checked = page.getByRole('group', { name: 'Guess 1', exact: true });
+  await expect(checked.getByRole('img', { name: 'C: right place', exact: true })).toBeVisible();
+  await page.clock.fastForward(10000);
+  await expect(page.getByRole('status')).toContainText('Word time is up');
+  await expect(page.getByRole('status')).toContainText('CAMP');
+  await expect(checked.getByRole('img', { name: 'C: right place', exact: true })).toBeVisible();
+  await expect(checked.getByRole('img', { name: 'A: elsewhere in word', exact: true })).toBeVisible();
+  const unfinished = page.getByRole('group', { name: 'Guess 2: not scored', exact: true });
+  await expect(unfinished).toHaveText('C✓AM');
+  await expect(unfinished.getByRole('img', { name: 'A: not scored', exact: true })).toBeVisible();
+  await expect(page.getByText('1 of 5 guesses used')).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Last entry was not scored');
+  await page.clock.runFor(20000);
+  await expect(unfinished).toHaveText('C✓AM');
+  await page.getByRole('button', { name: 'Next word', exact: true }).click();
+  await expect(page.getByText('Guess 1 of 5')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Guess 2', exact: true })).toHaveText('');
+  await expect(guessClock(page)).toHaveText('0:10');
+});
+
+test('round expiry preserves checked and unscored unknown guesses plus the unfinished row until a new round', async ({ page }) => {
+  await fixture(page);
+  await preset(page, 'final');
+  await guess(page, 'COAT');
+  await guess(page, 'CZZZ');
+  await enterWord(page, 'CAM');
+  const checked = page.getByRole('group', { name: 'Guess 1', exact: true });
+  const unknown = page.getByRole('group', { name: 'Guess 2: not in word list', exact: true });
+  await expect(checked.getByRole('img', { name: 'C: right place', exact: true })).toBeVisible();
+  await expect(unknown.getByRole('img', { name: 'Z: unscored; word not in list' })).toHaveCount(3);
+  await page.clock.fastForward(90000);
+  await expect(page.getByRole('status')).toContainText('Round time is up');
+  await expect(checked.getByRole('img', { name: 'C: right place', exact: true })).toBeVisible();
+  await expect(checked.getByRole('img', { name: 'A: elsewhere in word', exact: true })).toBeVisible();
+  await expect(unknown.getByRole('img', { name: 'Z: unscored; word not in list' })).toHaveCount(3);
+  const unfinished = page.getByRole('group', { name: 'Guess 3: not scored', exact: true });
+  await expect(unfinished).toHaveText('C✓AM');
+  await expect(unfinished.getByRole('img', { name: 'A: not scored', exact: true })).toBeVisible();
+  await expect(page.getByText('2 guesses used', { exact: true })).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Last entry was not scored');
+  await page.clock.runFor(20000);
+  await expect(unfinished).toHaveText('C✓AM');
+  await page.getByRole('button', { name: 'New round', exact: true }).click();
+  await expect(page.getByText('Guess 1 · Unlimited', { exact: true })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Guess 3', exact: true })).toHaveText('');
+  await expect(roundClock(page)).toHaveText('1:30');
+});
+
+test('an unknown word that ends an ITV word leaves no unfinished entry and stops the guess clock', async ({ page }) => {
+  await fixture(page);
+  await preset(page, 'itv-four');
+  await page.clock.runFor(4000);
   await guess(page, 'CZZZ');
   await expect(page.getByRole('status')).toContainText('Unknown submitted word: this word has ended');
-  await page.clock.fastForward(10000);
-  await expect(page.getByRole('status')).toContainText('Round time is up');
+  await expect(page.getByRole('status')).toContainText('CAMP');
+  await page.clock.fastForward(20000);
+  await expect(page.getByRole('status')).not.toContainText('Word time is up');
   await expect(page.getByRole('status')).not.toContainText('Last entry was not scored');
+  await expect(guessClock(page)).toHaveText('0:06');
   await expect(page.getByRole('group', { name: 'Guess 1', exact: true })).toHaveText('');
+  await expect(page.getByText('0 of 5 guesses used')).toBeVisible();
+  await page.getByRole('button', { name: 'Next word', exact: true }).click();
+  await expect(guessClock(page)).toHaveText('0:10');
 });
 
 test('giving up pauses the final until a same-length retry, without refilling its budget', async ({ page }) => {
@@ -171,30 +185,6 @@ test('guess progress shrinks precisely, refills on a spent guess and empties on 
   await expect(bar(page, 'Guess')).toHaveJSProperty('value', 10);
 });
 
-test('word and round bars follow their independent clocks and freeze with the right result', async ({ page }) => {
-  await fixture(page);
-  const dialog = await openSettings(page);
-  await dialog.getByLabel('Preset').selectOption('final');
-  await dialog.getByLabel('Word clock', { exact: true }).selectOption('word');
-  await dialog.getByRole('button', { name: 'Apply now' }).click();
-  await expect(bar(page, 'Word')).toHaveJSProperty('max', 10);
-  await expect(bar(page, 'Round')).toHaveJSProperty('max', 90);
-  await page.clock.runFor(4000);
-  await guess(page, 'COAT');
-  await expect(bar(page, 'Word')).toHaveJSProperty('value', 6);
-  await expect(bar(page, 'Round')).toHaveJSProperty('value', 86);
-  await guess(page, 'CAMP');
-  await page.clock.runFor(2000);
-  await expect(bar(page, 'Word')).toHaveJSProperty('value', 6);
-  await expect(bar(page, 'Round')).toHaveJSProperty('value', 86);
-  await page.getByRole('button', { name: 'Next length' }).click();
-  await expect(bar(page, 'Word')).toHaveJSProperty('value', 10);
-  await expect(bar(page, 'Round')).toHaveJSProperty('value', 86);
-  await page.clock.fastForward(86000);
-  await expect(bar(page, 'Word')).toHaveJSProperty('value', 0);
-  await expect(bar(page, 'Round')).toHaveJSProperty('value', 0);
-});
-
 test('ITV main-round preset has a ten-second guess clock and fails only the word', async ({ page }) => {
   await fixture(page);
   await preset(page, 'itv-five');
@@ -245,59 +235,55 @@ test('final sprint has unlimited guesses and one ninety-second clock across leng
   await expect(board.locator('.board-row')).toHaveCount(5);
 });
 
-test('per-word time continues across guesses and a timeout retries the same sequence length', async ({ page }) => {
+test('free rejections do not reset the guess clock, a checked guess does, and a saved preset waits for the next word', async ({ page }) => {
   await fixture(page);
-  const dialog = await openSettings(page);
-  await dialog.getByLabel('Preset').selectOption('sequence');
-  await dialog.getByLabel('Word clock', { exact: true }).selectOption('word');
-  await dialog.getByLabel('Word / guess seconds').fill('12');
-  await dialog.getByRole('button', { name: 'Apply now' }).click();
-  await page.clock.runFor(5000);
-  await guess(page, 'COAT');
-  await expect(wordClock(page)).toHaveText('0:07');
-  await page.clock.runFor(7000);
-  await expect(page.getByRole('status')).toContainText('Word time is up');
-  await page.getByRole('button', { name: 'Another 4-letter word' }).click();
-  await expect(wordClock(page)).toHaveText('0:12');
-});
-
-test('free rejections do not reset a clock, spent unknown guesses do, and changes wait for a new round', async ({ page }) => {
-  await fixture(page);
-  let dialog = await openSettings(page);
-  await dialog.getByLabel('Preset').selectOption('itv-five');
-  await dialog.getByLabel('Unknown submitted word').selectOption('reject');
-  await dialog.getByRole('button', { name: 'Apply now' }).click();
+  await preset(page, 'itv-five');
   await page.clock.runFor(4000);
-  await guess(page, 'CZZZZ');
+  await guess(page, 'CHA');
+  await expect(page.getByRole('status')).toContainText('Enter all 5 letters before checking.');
   await expect(guessClock(page)).toHaveText('0:06');
-  dialog = await openSettings(page);
-  await dialog.getByLabel('Unknown submitted word').selectOption('consume');
-  await dialog.getByLabel('Word / guess seconds').fill('20');
-  await dialog.getByRole('button', { name: 'Save for next round' }).click();
+  await guess(page, 'ZEBRA');
+  await expect(page.getByRole('status')).toContainText('Start with C.');
   await expect(guessClock(page)).toHaveText('0:06');
-  await guess(page, 'CZZZZ');
   await expect(page.getByText('Guess 1 of 5')).toBeVisible();
-  await guess(page, 'CHAIR');
-  await page.getByRole('button', { name: 'Next word', exact: true }).click();
-  await page.clock.runFor(4000);
-  await guess(page, 'CZZZZ');
+  const dialog = await openSettings(page);
+  await dialog.getByLabel('Preset').selectOption('practice-four');
+  await dialog.getByRole('button', { name: 'Save for next round' }).click();
+  await expect(page.locator('.pending-settings')).toContainText('Untimed');
+  await expect(guessClock(page)).toHaveText('0:06');
+  await guess(page, 'CARGO');
   await expect(page.getByText('Guess 2 of 5')).toBeVisible();
-  await expect(guessClock(page)).toHaveText('0:20');
+  await expect(guessClock(page)).toHaveText('0:10');
+  await page.clock.runFor(3000);
+  await guess(page, 'CHAIR');
+  await expect(page.getByRole('status')).toContainText('Nicely found');
+  await page.getByRole('button', { name: 'Next word', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
+  await expect(guessClock(page)).toHaveCount(0);
+  await expect(page.locator('.pending-settings')).toHaveCount(0);
+  await expect(page.locator('.clock-strip')).toHaveText('∞ Untimed');
 });
 
-test('clocks keep running with settings open, and the round wins simultaneous expiry', async ({ page }) => {
+test('the guess clock keeps running with settings open', async ({ page }) => {
   await fixture(page);
-  const dialog = await openSettings(page);
-  await dialog.getByLabel('Preset').selectOption('final');
-  await dialog.getByLabel('Word clock', { exact: true }).selectOption('guess');
-  await dialog.getByLabel('Word / guess seconds').fill('10');
-  await dialog.getByLabel('Round seconds').fill('10');
-  await dialog.getByRole('button', { name: 'Apply now' }).click();
+  await preset(page, 'itv-four');
+  await enterWord(page, 'CA');
   await openSettings(page);
   await page.clock.fastForward(10000);
   await page.getByRole('button', { name: 'Close dialog' }).click();
+  await expect(page.getByRole('status')).toContainText('Word time is up');
+  await expect(page.getByRole('group', { name: 'Guess 1: not scored', exact: true })).toHaveText('C✓A');
+});
+
+test('the final round clock keeps running with settings open', async ({ page }) => {
+  await fixture(page);
+  await preset(page, 'final');
+  await guess(page, 'COAT');
+  await openSettings(page);
+  await page.clock.fastForward(90000);
+  await page.getByRole('button', { name: 'Close dialog' }).click();
   await expect(page.getByRole('status')).toContainText('Round time is up');
-  await expect(page.getByRole('status')).not.toContainText('Word time is up');
+  await expect(page.getByText('1 guess used', { exact: true })).toBeVisible();
 });
 
 test('late submission after a suspended clock cannot turn expiry into a win', async ({ page }) => {
@@ -334,39 +320,17 @@ test('a completed final stops its clock instead of expiring on the result screen
   await expect(roundClock(page)).toHaveText('1:30');
 });
 
-test('timer controls validate durations, persist choices and restore the preset', async ({ page }) => {
+test('a timed preset persists across reload and starts a fresh guess clock', async ({ page }) => {
   await fixture(page);
-  const dialog = await openSettings(page);
-  await dialog.getByLabel('Preset').selectOption('itv-four');
-  await dialog.getByLabel('Word / guess seconds').fill('0');
-  await dialog.getByRole('button', { name: 'Apply now' }).click();
-  await expect(dialog).toBeVisible();
-  await dialog.getByLabel('Word / guess seconds').fill('10');
-  await dialog.getByRole('button', { name: 'Apply now' }).click();
+  await preset(page, 'itv-four');
+  await page.clock.runFor(4000);
+  await expect(guessClock(page)).toHaveText('0:06');
   await page.reload();
+  await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
   await expect(guessClock(page)).toHaveText('0:10');
+  await expect(bar(page, 'Guess')).toHaveJSProperty('value', 10);
   const reopened = await openSettings(page);
   await expect(reopened.getByLabel('Preset')).toHaveValue('itv-four');
-  await expect(reopened.getByLabel('Unknown submitted word')).toHaveValue('fail');
-});
-
-test('turning a word clock off preserves a valid duration and discards incomplete disabled edits', async ({ page }) => {
-  await fixture(page);
-  let dialog = await openSettings(page);
-  await dialog.getByLabel('Preset').selectOption('itv-five');
-  await dialog.getByLabel('Word / guess seconds').fill('20');
-  await dialog.getByLabel('Word clock', { exact: true }).selectOption('off');
-  await dialog.getByRole('button', { name: 'Save for next round' }).click();
-  await page.reload();
-  dialog = await openSettings(page);
-  await expect(dialog.getByLabel('Word / guess seconds')).toHaveValue('20');
-  await dialog.getByLabel('Word clock', { exact: true }).selectOption('guess');
-  await dialog.getByLabel('Word / guess seconds').fill('');
-  await dialog.getByLabel('Word clock', { exact: true }).selectOption('off');
-  await dialog.getByRole('button', { name: 'Save for next round' }).click();
-  await page.reload();
-  dialog = await openSettings(page);
-  await expect(dialog.getByLabel('Word / guess seconds')).toHaveValue('20');
 });
 
 test('changing appearance does not restart a live clock or discard the entry', async ({ page }) => {
@@ -464,34 +428,29 @@ test.describe('mobile timed play', () => {
       await expect(board.getByRole('group', { name: 'Guess 2', exact: true }).getByRole('img', { name: 'C: right place', exact: true })).toBeVisible();
       await page.screenshot({ path: testInfo.outputPath(`unlimited-expiry-${theme}-320.png`), fullPage: true });
     });
-    test(`${theme} shows both clocks without overflow`, async ({ page }, testInfo) => {
+    test(`${theme} shows the guess clock without overflow through expiry`, async ({ page }, testInfo) => {
       await fixture(page);
       const dialog = await openSettings(page);
       await dialog.getByLabel('Appearance', { exact: true }).selectOption(theme);
-      await dialog.getByLabel('Preset').selectOption('final');
-      await dialog.getByLabel('Word clock', { exact: true }).selectOption('guess');
+      await dialog.getByLabel('Preset').selectOption('itv-four');
       await dialog.getByRole('button', { name: 'Apply now' }).tap();
       await expect(guessClock(page)).toHaveText('0:10');
-      await expect(roundClock(page)).toHaveText('1:30');
+      await expect(roundClock(page)).toHaveCount(0);
       await page.clock.runFor(3000);
       await expect(bar(page, 'Guess')).toHaveJSProperty('value', 7);
-      await expect(bar(page, 'Round')).toHaveJSProperty('value', 87);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.evaluate(async () => { await document.fonts.ready; });
       expect(await page.getByRole('heading', { name: 'Find the four.' }).evaluate((heading) =>
         heading.getBoundingClientRect().height <= parseFloat(getComputedStyle(heading).lineHeight) + 1)).toBe(true);
-      await page.screenshot({ path: testInfo.outputPath(`clocks-${theme}-320.png`), fullPage: true });
-      for (const letter of 'CAMP') await page.getByRole('button', { name: letter, exact: true }).tap();
+      await page.screenshot({ path: testInfo.outputPath(`clock-${theme}-320.png`), fullPage: true });
+      for (const letter of 'COAT') await page.getByRole('button', { name: letter, exact: true }).tap();
       await page.getByRole('button', { name: 'Check guess' }).tap();
-      await expect(page.getByRole('status')).toContainText('Nicely found');
-      await page.getByRole('button', { name: 'Next length' }).tap();
-      for (const letter of 'CARGO') await page.getByRole('button', { name: letter, exact: true }).tap();
-      await page.getByRole('button', { name: 'Check guess' }).tap();
-      for (const letter of 'CHA') await page.getByRole('button', { name: letter, exact: true }).tap();
+      await expect(guessClock(page)).toHaveText('0:10');
+      for (const letter of 'CAM') await page.getByRole('button', { name: letter, exact: true }).tap();
       await page.clock.fastForward(10000);
       await expect(page.getByRole('status')).toContainText('Word time is up');
-      await expect(page.getByRole('group', { name: 'Guess 1', exact: true }).getByRole('img', { name: 'G: not in word', exact: true })).toBeVisible();
-      await expect(page.getByRole('group', { name: 'Guess 2: not scored', exact: true })).toHaveText('C✓HA');
+      await expect(page.getByRole('group', { name: 'Guess 1', exact: true }).getByRole('img', { name: 'O: not in word', exact: true })).toBeVisible();
+      await expect(page.getByRole('group', { name: 'Guess 2: not scored', exact: true })).toHaveText('C✓AM');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.screenshot({ path: testInfo.outputPath(`expiry-${theme}-320.png`), fullPage: true });
     });

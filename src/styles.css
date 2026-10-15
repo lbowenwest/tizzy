@@ -578,43 +578,6 @@ dialog h2 {
   line-height:1.7;
   color:var(--muted)
 }
-.timing-settings {
-  border:0;
-  border-top:1px solid var(--line);
-  padding:14px 0 0;
-  margin:20px 0 0;
-}
-.timing-settings legend {
-  padding:0 8px 0 0;
-  font-size:12px;
-}
-dialog input[type="number"] {
-  width:100%;
-  min-width:0;
-  min-height:44px;
-  font:inherit;
-  font-size:16px;
-  padding:11px 8px;
-  border:1px solid var(--line);
-  border-radius:var(--radius);
-  color:var(--ink);
-  background:var(--paper);
-}
-dialog input:disabled {
-  opacity:.6;
-}
-dialog .round-clock-toggle {
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-height:44px;
-  margin:14px 0 0;
-}
-.round-clock-toggle input {
-  width:20px;
-  height:20px;
-  accent-color:var(--accent);
-}
 .field {
   margin-top:16px
 }
@@ -633,14 +596,6 @@ dialog select {
   border-radius:var(--radius);
   font-size:16px;
   min-height:44px
-}
-dialog select:disabled {
-  opacity:.6
-}
-.form-grid {
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:0 16px
 }
 dialog .settings-footnote {
   font-size:11px;
@@ -961,9 +916,6 @@ dialog:has(.settings-form) > :is(.dialog-heading,h2) {
     padding:20px;
     max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom))
   }
-  .form-grid {
-    gap:0 10px
-  }
   .sequence {
     margin-bottom:14px
   }
@@ -972,9 +924,6 @@ dialog:has(.settings-form) > :is(.dialog-heading,h2) {
   }
 }
 @media(max-width:350px) {
-  .form-grid {
-    grid-template-columns:1fr;
-  }
   .key-row {
     gap:2px
   }

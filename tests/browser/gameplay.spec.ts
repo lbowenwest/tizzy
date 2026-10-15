@@ -62,7 +62,7 @@ test('theme is live, rules wait for the next round and saved choices survive rel
   const dialog = await settings(page);
   await dialog.getByLabel('Appearance', { exact: true }).selectOption('club');
   await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'club');
-  await dialog.getByLabel('Word length', { exact: true }).selectOption('6');
+  await dialog.getByLabel('Preset', { exact: true }).selectOption('practice-six');
   await dialog.getByRole('button', { name: 'Save for next round' }).click();
   await expect(page.getByRole('button', { name: 'Settings', exact: true })).toBeFocused();
   await expect(entry(page)).toHaveText('CHA');
@@ -76,16 +76,14 @@ test('theme is live, rules wait for the next round and saved choices survive rel
   await expect(page.getByRole('heading', { name: 'Find the six.' })).toBeVisible();
 });
 
-test('invalid failure retries same length, solve advances, six completes the sequence', async ({ page }) => {
+test('a failed word retries the same length, solve advances, six completes the sequence', async ({ page }) => {
   await wordFixtures(page);
   await page.goto('/');
   const dialog = await settings(page);
   await dialog.getByLabel('Preset').selectOption('sequence');
-  await dialog.getByLabel('Unknown submitted word').selectOption('fail');
-  await expect(dialog.getByLabel('Preset')).toHaveValue('custom');
   await dialog.getByRole('button', { name: 'Apply now' }).click();
   await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
-  await guess(page, 'CZZZ');
+  for (let index = 0; index < 5; index++) await guess(page, 'COAT');
   await expect(page.getByRole('status')).toContainText('CAMP');
   await page.getByRole('button', { name: 'Another 4-letter word' }).click();
   await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
@@ -209,7 +207,7 @@ test.describe('touch presentation', () => {
         await page.goto('/');
         const dialog = await settings(page);
         await dialog.getByLabel('Appearance', { exact: true }).selectOption(theme);
-        await dialog.getByLabel('Word length', { exact: true }).selectOption('6');
+        await dialog.getByLabel('Preset', { exact: true }).selectOption('practice-six');
         await dialog.getByRole('button', { name: 'Apply now' }).tap();
         await expect(page.getByRole('heading', { name: 'Find the six.' })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

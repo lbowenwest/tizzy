@@ -47,8 +47,6 @@ export type Round = {
   roundStartedAt: number;
   endedAt: number | null;
 };
-export const guessOptions: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-
 // Unmatched answer letters a–z; reused because building clues evaluates millions of pairs.
 const remaining = new Int8Array(26);
 /** Exact matches consume letters first; misplaced matches can only use what's left. Words are lowercase a–z. */

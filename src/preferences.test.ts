@@ -1,72 +1,35 @@
 import { describe, expect, it } from 'vitest';
 import { defaults, parsePreferences } from './preferences';
 import { copyRules, defaultRules } from './game';
-import { describeRules, getPresetKey, presets } from './presets';
+import { describeRules, getPresetKey, presetRules, presets } from './presets';
 
 describe('preferences', () => {
-  it('preserves every supported guess count', () => {
-    for (let maxGuesses = 1; maxGuesses <= 10; maxGuesses++) {
-      const value = { theme: 'club', rules: { ...copyRules(defaultRules), maxGuesses } };
+  it('round-trips every preset and theme', () => {
+    for (const { key } of presets) {
+      const value = { theme: 'club', preset: key };
       expect(parsePreferences(JSON.stringify(value))).toEqual(value);
-    }
-  });
-  it('preserves an explicit unlimited guess limit', () => {
-    const value = { theme: 'club', rules: { ...copyRules(defaultRules), maxGuesses: null } };
-    expect(parsePreferences(JSON.stringify(value))).toEqual(value);
-  });
-  it('rejects invalid numeric guess counts', () => {
-    for (const maxGuesses of [0, -1, 11, 1.5, '6', true, 1_000_000]) {
-      expect(parsePreferences(JSON.stringify({ theme: 'club', rules: { ...copyRules(defaultRules), maxGuesses } }))).toEqual(defaults);
-    }
-  });
-  it('keeps a saved clue choice and rejects a malformed one', () => {
-    const value = { theme: 'club', rules: { ...copyRules(defaultRules), clue: true } };
-    expect(parsePreferences(JSON.stringify(value))).toEqual(value);
-    for (const clue of ['yes', 1, null]) {
-      expect(parsePreferences(JSON.stringify({ theme: 'club', rules: { ...copyRules(defaultRules), clue } }))).toEqual(defaults);
     }
   });
   it('recovers from missing, corrupt and invalid storage', () => {
-    for (const input of [null, '{', 'true', '{}', '{"theme":"unknown","rules":{}}', '{"theme":"club","rules":{"length":99}}']) {
-      expect(parsePreferences(input)).toEqual(defaults);
+    for (const input of [null, '{', 'true', '{}', '{"theme":"unknown","preset":"practice"}', '{"theme":"club","preset":"custom"}']) {
+      expect(parsePreferences(input).preset).toBe(defaults.preset);
     }
+    expect(parsePreferences('{"theme":"unknown","preset":"final"}')).toEqual({ theme: 'letterpress', preset: 'final' });
   });
-  it('upgrades legacy preferences to untimed without losing their choices', () => {
-    const legacy = { theme: 'club', rules: { format: 'sequence', length: 6, invalid: 'consume' } };
-    expect(parsePreferences(JSON.stringify(legacy))).toEqual({
-      theme: 'club', rules: { ...defaultRules, ...legacy.rules },
-    });
+  it('maps rules saved before presets-only to the preset they match', () => {
+    const saved = (rules: object) => parsePreferences(JSON.stringify({ theme: 'afterhours', rules })).preset;
+    for (const preset of presets) expect(saved(preset.rules)).toBe(preset.key);
+    // Fields added since default as they did then: untimed, five guesses, no clue.
+    expect(saved({ format: 'single', length: 4, invalid: 'reject' })).toBe('practice-four');
+    expect(saved({ format: 'single', length: 5, invalid: 'fail', wordClock: { mode: 'guess', seconds: 10 } })).toBe('itv-five');
+    expect(parsePreferences(JSON.stringify({ theme: 'afterhours', rules: { length: 6 } }))).toEqual({ theme: 'afterhours', preset: 'practice-six' });
   });
-  it('upgrades previously saved timed rules to five guesses without losing timers', () => {
-    const legacy = { theme: 'afterhours', rules: { format: 'sequence', length: 6, invalid: 'consume',
-      wordClock: { mode: 'guess', seconds: 12 }, roundSeconds: 90 } };
-    expect(parsePreferences(JSON.stringify(legacy))).toEqual({ theme: 'afterhours',
-      rules: { ...legacy.rules, maxGuesses: 5, clue: false } });
-  });
-  it('restores supported choices without accepting arbitrary fields', () => {
-    expect(parsePreferences(JSON.stringify({ theme: 'club', rules: { format: 'sequence', length: 6, invalid: 'fail', timer: true } })))
-      .toEqual({ theme: 'club', rules: { ...defaultRules, format: 'sequence', length: 6, invalid: 'fail' } });
-  });
-  it('persists every timer mode and independent overall duration', () => {
-    for (const mode of ['off', 'word', 'guess'] as const) {
-      const value = { theme: 'afterhours', rules: { ...copyRules(defaultRules), format: 'sequence', wordClock: { mode, seconds: 12 }, roundSeconds: 90 } };
-      expect(parsePreferences(JSON.stringify(value))).toEqual(value);
-    }
-  });
-  it('rejects invalid timer modes, durations and shapes', () => {
-    for (const wordClock of [null, {}, { mode: 'unknown', seconds: 10 }, { mode: 'guess', seconds: 0 },
-      { mode: 'word', seconds: -1 }, { mode: 'word', seconds: 1.5 }, { mode: 'word', seconds: '10' }]) {
-      expect(parsePreferences(JSON.stringify({ ...defaults, rules: { ...defaultRules, wordClock } }))).toEqual(defaults);
-    }
-    for (const roundSeconds of [0, -1, 1.5, '90', false, {}]) {
-      expect(parsePreferences(JSON.stringify({ ...defaults, rules: { ...defaultRules, roundSeconds } }))).toEqual(defaults);
-    }
-  });
-  it('returns independent nested settings for defaults and restored storage', () => {
-    const value = parsePreferences(null);
-    value.rules.wordClock.seconds = 123;
-    expect(parsePreferences(null)).toEqual(defaults);
-    expect(defaults.rules.wordClock.seconds).toBe(10);
+  it('falls back to Practice for custom or malformed saved rules', () => {
+    const saved = (rules: unknown) => parsePreferences(JSON.stringify({ theme: 'club', rules })).preset;
+    expect(saved({ ...defaultRules, maxGuesses: 3 })).toBe('practice');
+    expect(saved({ format: 'sequence', length: 6, invalid: 'consume' })).toBe('practice');
+    expect(saved({ ...defaultRules, wordClock: { mode: 'word', seconds: 12 } })).toBe('practice');
+    for (const rules of [null, 'x', { wordClock: null }, { length: 99 }]) expect(saved(rules)).toBe('practice');
   });
 });
 
@@ -84,21 +47,27 @@ describe('presets', () => {
     expect(inOne.rules).toEqual({ ...defaultRules, maxGuesses: 1, clue: true });
     expect(describeRules(inOne.rules)).toBe('5 letters · Starts with a clue only the answer fits; no first letter · 1 guess per word · Untimed · Unknown words are free to reject');
   });
-  it('shares the ordinary editable configuration path and round-trips through storage', () => {
-    for (const preset of presets) {
-      expect(getPresetKey(preset.rules)).toBe(preset.key);
-      const restored = parsePreferences(JSON.stringify({ theme: 'club', rules: preset.rules }));
-      expect(restored.rules).toEqual(preset.rules);
-      expect(getPresetKey(restored.rules)).toBe(preset.key);
+  it('offers untimed practice at every length, then the sequence and timed presets', () => {
+    expect(presets.map(({ key }) => key)).toEqual(['practice-four', 'practice', 'practice-six', 'sequence', 'itv-four', 'itv-five', 'final', 'in-one']);
+    for (const length of [4, 5, 6] as const) {
+      expect(presets.find(({ rules }) => rules.format === 'single' && !rules.clue && rules.wordClock.mode === 'off' && rules.length === length)!.rules)
+        .toEqual({ ...defaultRules, length });
     }
   });
-  it('marks changed configurations as custom and keeps themes outside game rules', () => {
+  it('identify their own rules and hand out independent copies', () => {
+    for (const preset of presets) expect(getPresetKey(preset.rules)).toBe(preset.key);
+    const copy = presetRules('itv-five');
+    copy.wordClock.seconds = 20;
+    expect(presetRules('itv-five').wordClock.seconds).toBe(10);
+    expect(presetRules('retired')).toEqual(presetRules('practice'));
+  });
+  it('match no preset for changed configurations', () => {
     const preset = presets.find(({ key }) => key === 'itv-five')!;
     const changed = copyRules(preset.rules);
     changed.wordClock.seconds = 20;
-    expect(getPresetKey(changed)).toBe('custom');
+    expect(getPresetKey(changed)).toBeNull();
     expect(preset.rules.wordClock.seconds).toBe(10);
-    expect(getPresetKey({ ...preset.rules, maxGuesses: 6 })).toBe('custom');
+    expect(getPresetKey({ ...preset.rules, maxGuesses: 6 })).toBeNull();
   });
   it('recognises presets despite settings the format or clock ignores', () => {
     const rulesFor = (key: string) => copyRules(presets.find((entry) => entry.key === key)!.rules);
@@ -106,10 +75,10 @@ describe('presets', () => {
     expect(getPresetKey({ ...rulesFor('final'), length: 6 })).toBe('final');
     expect(getPresetKey({ ...rulesFor('practice'), wordClock: { mode: 'off', seconds: 20 } })).toBe('practice');
     expect(getPresetKey({ ...rulesFor('practice'), roundSeconds: 90 })).toBe('practice');
-    expect(getPresetKey({ ...rulesFor('practice'), length: 4 })).toBe('custom');
-    expect(getPresetKey({ ...rulesFor('sequence'), roundSeconds: 90 })).toBe('custom');
+    expect(getPresetKey({ ...rulesFor('practice'), length: 4 })).toBe('practice-four');
+    expect(getPresetKey({ ...rulesFor('sequence'), roundSeconds: 90 })).toBeNull();
     expect(getPresetKey({ ...rulesFor('sequence'), clue: true })).toBe('sequence');
     expect(describeRules({ ...rulesFor('sequence'), clue: true })).toBe(describeRules(rulesFor('sequence')));
-    expect(getPresetKey({ ...rulesFor('practice'), clue: true })).toBe('custom');
+    expect(getPresetKey({ ...rulesFor('practice'), clue: true })).toBeNull();
   });
 });

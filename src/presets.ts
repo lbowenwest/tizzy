@@ -1,9 +1,18 @@
 import { copyRules, defaultRules, normalizeRules, type Rules } from './game';
 
+/** Every round is played under one of these; history groups words by their key, so keys must stay stable. */
 export const presets: readonly { key: string; label: string; rules: Rules }[] = [
   {
-    key: 'practice', label: 'Practice · untimed',
+    key: 'practice-four', label: 'Practice · 4 letters',
+    rules: { ...copyRules(defaultRules), length: 4 },
+  },
+  {
+    key: 'practice', label: 'Practice · 5 letters',
     rules: copyRules(defaultRules),
+  },
+  {
+    key: 'practice-six', label: 'Practice · 6 letters',
+    rules: { ...copyRules(defaultRules), length: 6 },
   },
   {
     key: 'sequence', label: '4 → 5 → 6 · untimed',
@@ -34,8 +43,22 @@ export function sameRules(first: Rules, second: Rules): boolean {
     && a.roundSeconds === b.roundSeconds && a.clue === b.clue;
 }
 
-export function getPresetKey(rules: Rules): string {
-  return presets.find(({ rules: candidate }) => sameRules(candidate, rules))?.key ?? 'custom';
+export const defaultPreset = 'practice';
+
+export const isPresetKey = (key: unknown): key is string => presets.some((preset) => preset.key === key);
+
+export function presetLabel(key: string): string {
+  return presets.find((preset) => preset.key === key)?.label ?? key;
+}
+
+/** A fresh copy of a preset's rules; unknown keys fall back to the default preset. */
+export function presetRules(key: string): Rules {
+  return copyRules((presets.find((preset) => preset.key === key) ?? presets.find((preset) => preset.key === defaultPreset)!).rules);
+}
+
+/** The preset these rules belong to, or null for rules no preset uses. */
+export function getPresetKey(rules: Rules): string | null {
+  return presets.find(({ rules: candidate }) => sameRules(candidate, rules))?.key ?? null;
 }
 
 export function describeRules(rules: Rules): string {

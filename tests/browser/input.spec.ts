@@ -66,28 +66,26 @@ for (const theme of ['letterpress', 'afterhours', 'club']) {
   });
 }
 
-test('unknown words can use one guess, persist the policy, and exhaust the word', async ({ page }) => {
+test('unknown words use an unscored guess in Final sprint, persist with the preset, and end ITV-style words', async ({ page }) => {
+  await page.route('**/words/answers/4.txt', (route) => route.fulfill({ body: 'camp\n' }));
+  await page.route('**/words/4.txt', (route) => route.fulfill({ body: 'camp\ncoat\n' }));
   await fixture(page);
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await page.getByLabel('Unknown submitted word').selectOption('consume');
+  await page.getByLabel('Preset').selectOption('final');
   await page.getByRole('button', { name: 'Apply now' }).click();
   await page.reload();
   await expect(input(page)).toBeVisible();
-  await submit(page, 'CHAI');
-  await expect(page.getByText('Guess 1 of 5')).toBeVisible();
-  await submit(page, 'CZZZZ');
-  await expect(page.getByText('Guess 2 of 5')).toBeVisible();
-  await expect(page.getByRole('status')).toContainText('Guess used');
+  await submit(page, 'CHA');
+  await expect(page.getByText('Guess 1 · Unlimited')).toBeVisible();
+  await submit(page, 'CZZZ');
+  await expect(page.getByText('Guess 2 · Unlimited')).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('No letter clues awarded');
   const row = page.getByRole('group', { name: 'Guess 1: not in word list', exact: true });
-  await expect(row.getByRole('img', { name: 'Z: unscored; word not in list' })).toHaveCount(4);
+  await expect(row.getByRole('img', { name: 'Z: unscored; word not in list' })).toHaveCount(3);
   await expect(page.getByRole('button', { name: 'Z', exact: true })).not.toHaveClass(/unavailable/);
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await page.getByLabel('Unknown submitted word').selectOption('fail');
-  await page.getByRole('button', { name: 'Save for next round' }).click();
-  for (let index = 1; index < 5; index++) await submit(page, 'CZZZZ');
-  await expect(page.getByRole('status')).toContainText('CHAIR');
-  await expect(page.getByText('5 of 5 guesses used')).toBeVisible();
-  await page.getByRole('button', { name: 'Next word', exact: true }).click();
+  await page.getByLabel('Preset').selectOption('itv-five');
+  await page.getByRole('button', { name: 'Apply now' }).click();
   await expect(page.getByText('Guess 1 of 5')).toBeVisible();
   await submit(page, 'CZZZZ');
   await expect(page.getByRole('status')).toContainText('Unknown submitted word: this word has ended');

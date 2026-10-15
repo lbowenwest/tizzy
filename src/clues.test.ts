@@ -88,11 +88,10 @@ describe('clue rounds', () => {
   });
 
   it('record rejected tries as guesses, not unknown words, under In one', () => {
-    let round = startRound(data, { ...threeTries, invalid: 'consume' }, undefined, random, 0);
-    for (const word of ['cabin', 'zzzzz', 'chair']) round = submitGuess(round, word, allowed, 5).round;
-    expect(toRecord(round)).toMatchObject({ group: 'custom', result: 'solved', guesses: 3, unknown: 1 });
-    const preset = submitGuess(startRound(data, inOne, undefined, random, 0), 'chair', allowed, 5).round;
-    expect(toRecord(preset)).toMatchObject({ group: 'in-one', guesses: 1, unknown: 0 });
+    const rejected = submitGuess(startRound(data, inOne, undefined, random, 0), 'cabin', allowed, 5).round;
+    expect(toRecord(rejected)).toMatchObject({ group: 'in-one', result: 'failed', reason: 'attempts', guesses: 1, unknown: 0 });
+    const solved = submitGuess(startRound(data, inOne, undefined, random, 0), 'chair', allowed, 5).round;
+    expect(toRecord(solved)).toMatchObject({ group: 'in-one', result: 'solved', guesses: 1, unknown: 0 });
   });
 });
 

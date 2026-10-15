@@ -1,5 +1,5 @@
 import type { Round, Rules, WordLength } from './game';
-import { getPresetKey } from './presets';
+import { getPresetKey, isPresetKey } from './presets';
 
 type FailureReason = NonNullable<Round['reason']>;
 export type HistoryRecord = {
@@ -8,7 +8,7 @@ export type HistoryRecord = {
   answer: string;
   length: WordLength;
   format: Rules['format'];
-  group: string; // A preset key, or 'custom'.
+  group: string; // A preset key.
   result: 'solved' | 'failed';
   reason: FailureReason | null;
   guesses: number;
@@ -30,12 +30,16 @@ export const historyLimit = 1000;
 const storageKey = 'word-practice-history-v1';
 const reasons: readonly FailureReason[] = ['attempts', 'invalid', 'word-time', 'round-time', 'given-up'];
 
-/** A finished word's record; a word keeps one id, so a later round expiry replaces its earlier result. */
+/**
+ * A finished word's record; a word keeps one id, so a later round expiry replaces its earlier result.
+ * Only preset rounds are recorded, so every group's statistics compare like with like.
+ */
 export function toRecord(round: Round): HistoryRecord | null {
-  if (round.status === 'playing' || round.endedAt === null) return null;
+  const group = getPresetKey(round.rules);
+  if (round.status === 'playing' || round.endedAt === null || group === null) return null;
   return {
     id: `${round.startedAt}:${round.answer}`, roundId: round.roundStartedAt, answer: round.answer,
-    length: round.length, format: round.rules.format, group: getPresetKey(round.rules),
+    length: round.length, format: round.rules.format, group,
     result: round.status === 'won' ? 'solved' : 'failed', reason: round.status === 'won' ? null : round.reason ?? null,
     guesses: round.guesses.length, unknown: round.guesses.filter(({ feedback, rejection }) => feedback === null && rejection === undefined).length,
     durationMs: round.endedAt - round.startedAt, endedAt: round.endedAt,
@@ -50,10 +54,11 @@ export function addRecord(records: readonly HistoryRecord[], record: HistoryReco
 
 const count = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0;
 
+/** Drops malformed records, and records from custom settings or retired presets, which have no group to show. */
 function parseRecord(value: any): HistoryRecord | null {
   if (!value || typeof value.id !== 'string' || !count(value.roundId) || ![4, 5, 6].includes(value.length)
     || typeof value.answer !== 'string' || !new RegExp(`^[a-z]{${value.length}}$`).test(value.answer)
-    || !['single', 'sequence'].includes(value.format) || typeof value.group !== 'string' || !value.group
+    || !['single', 'sequence'].includes(value.format) || !isPresetKey(value.group)
     || !(value.result === 'solved' ? value.reason === null : value.result === 'failed' && reasons.includes(value.reason))
     || !count(value.guesses) || !count(value.unknown) || value.unknown > value.guesses
     || !count(value.durationMs) || !count(value.endedAt)) return null;

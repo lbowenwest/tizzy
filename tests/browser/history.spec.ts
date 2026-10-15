@@ -65,7 +65,7 @@ test('records finished words and summarises them by preset across reloads', asyn
     await expect(distribution.first()).toHaveAccessibleName('1 guess: 1 word');
     await expect(distribution.last()).toHaveAccessibleName('2 guesses: 1 word');
     await expect(recent(page)).toHaveCount(3);
-    await expect(recent(page).first()).toHaveText(/CHAIR.*Solved.*1 guess.*Practice · untimed/);
+    await expect(recent(page).first()).toHaveText(/CHAIR.*Solved.*1 guess.*Practice · 5 letters/);
     await expect(recent(page).nth(1)).toHaveText(/CHAIR.*Out of guesses.*5 guesses/);
     await page.keyboard.press('Escape');
     await expect(dialog).not.toBeVisible();
@@ -92,25 +92,23 @@ test('groups presets separately and skips words left unfinished by Apply now or 
   await expect(recent(page).first()).toHaveText(/CAMP.*Solved.*2 guesses.*Final sprint/);
 });
 
-test('a failed sequence word whose round then expires is recorded once, as round time', async ({ page }) => {
+test('words recorded under custom settings are deleted', async ({ page }) => {
+  const record = (endedAt: number, group: string, answer: string) => ({ id: `${endedAt}:${answer}`, roundId: endedAt, answer,
+    length: 5, format: 'single', group, result: 'solved', reason: null, guesses: 2, unknown: 0, durationMs: 1000, endedAt });
+  const seeded = JSON.stringify({ version: 1, records: [record(1, 'custom', 'cargo'), record(2, 'practice', 'chair')] });
+  await page.addInitScript((value) => window.localStorage.setItem('word-practice-history-v1', value), seeded);
   await fixture(page);
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  const settings = page.getByRole('dialog');
-  await settings.getByLabel('Preset').selectOption('sequence');
-  await settings.getByLabel('Unknown submitted word').selectOption('fail');
-  await settings.getByLabel('Overall sequence clock').check();
-  await settings.getByLabel('Round seconds').fill('10');
-  await settings.getByRole('button', { name: 'Apply now' }).click();
-  await guess(page, 'CZZZ');
-  await expect(page.getByRole('status')).toContainText('Unknown submitted word');
-  await page.clock.fastForward(10000);
-  await expect(page.getByRole('status')).toContainText('Round time is up');
-  await openHistory(page);
-  await expect(page.getByRole('dialog').getByLabel('Group')).toHaveValue('custom');
+  const dialog = await openHistory(page);
+  await expect(dialog.getByLabel('Group').getByRole('option')).toHaveText(['Practice · 5 letters']);
   await expect(stat(page, 'Played')).toHaveText('1');
-  await expect(stat(page, 'Round time ran out')).toHaveText('1');
   await expect(recent(page)).toHaveCount(1);
-  await expect(recent(page).first()).toHaveText(/CAMP.*Round time up.*0 guesses.*Custom/);
+  await page.keyboard.press('Escape');
+  // The next finished word rewrites storage without them.
+  await guess(page, 'CHAIR');
+  await expect(page.getByRole('status')).toContainText('Nicely found');
+  const groups = await page.evaluate(() => JSON.parse(window.localStorage.getItem('word-practice-history-v1')!).records
+    .map(({ group }: { group: string }) => group));
+  expect(groups).toEqual(['practice', 'practice']);
 });
 
 test('clearing history needs confirmation', async ({ page }) => {

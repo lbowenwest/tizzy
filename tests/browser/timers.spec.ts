@@ -32,7 +32,7 @@ const bar = (page: Page, label: string) => page.getByRole('progressbar', { name:
 
 test('guess expiry preserves checked guesses plus the unfinished row until the next word', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'itv-four');
+  await preset(page, 'quickfire-four');
   await guess(page, 'COAT');
   await enterWord(page, 'CAM');
   const checked = page.getByRole('group', { name: 'Guess 1', exact: true });
@@ -57,7 +57,7 @@ test('guess expiry preserves checked guesses plus the unfinished row until the n
 
 test('round expiry preserves checked and unscored unknown guesses plus the unfinished row until a new round', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'final');
+  await preset(page, 'sprint');
   await guess(page, 'COAT');
   await guess(page, 'CZZZ');
   await enterWord(page, 'CAM');
@@ -83,9 +83,9 @@ test('round expiry preserves checked and unscored unknown guesses plus the unfin
   await expect(roundClock(page)).toHaveText('1:30');
 });
 
-test('an unknown word that ends an ITV word leaves no unfinished entry and stops the guess clock', async ({ page }) => {
+test('an unknown word that ends a Quickfire word leaves no unfinished entry and stops the guess clock', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'itv-four');
+  await preset(page, 'quickfire-four');
   await page.clock.runFor(4000);
   await guess(page, 'CZZZ');
   await expect(page.getByRole('status')).toContainText('Unknown submitted word: this word has ended');
@@ -102,7 +102,7 @@ test('an unknown word that ends an ITV word leaves no unfinished entry and stops
 
 test('giving up pauses the final until a same-length retry, without refilling its budget', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'final');
+  await preset(page, 'sprint');
   await guess(page, 'COAT');
   await enterWord(page, 'CAM');
   await page.clock.runFor(5000);
@@ -133,7 +133,7 @@ test('giving up pauses the final until a same-length retry, without refilling it
 
 test('solved lengths pause numbers and progress through dialogs and background wake-ups, then resume exactly', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'final');
+  await preset(page, 'sprint');
   await page.clock.runFor(4500);
   await guess(page, 'CAMP');
   await expect(roundClock(page)).toHaveText('1:26');
@@ -170,7 +170,7 @@ test('solved lengths pause numbers and progress through dialogs and background w
 test('guess progress shrinks precisely, refills on a spent guess and empties on expiry', async ({ page }) => {
   await fixture(page);
   await expect(page.getByRole('progressbar')).toHaveCount(0);
-  await preset(page, 'itv-five');
+  await preset(page, 'quickfire-five');
   await expect(bar(page, 'Guess')).toHaveJSProperty('max', 10);
   await expect(bar(page, 'Guess')).toHaveJSProperty('value', 10);
   await page.clock.runFor(4500);
@@ -185,9 +185,9 @@ test('guess progress shrinks precisely, refills on a spent guess and empties on 
   await expect(bar(page, 'Guess')).toHaveJSProperty('value', 10);
 });
 
-test('ITV main-round preset has a ten-second guess clock and fails only the word', async ({ page }) => {
+test('Quickfire preset has a ten-second guess clock and fails only the word', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'itv-five');
+  await preset(page, 'quickfire-five');
   await expect(guessClock(page)).toHaveText('0:10');
   await page.clock.runFor(4000);
   await expect(guessClock(page)).toHaveText('0:06');
@@ -200,9 +200,9 @@ test('ITV main-round preset has a ten-second guess clock and fails only the word
   await expect(guessClock(page)).toHaveText('0:10');
 });
 
-test('final sprint has unlimited guesses and one ninety-second clock across lengths', async ({ page }) => {
+test('Sprint has unlimited guesses and one ninety-second clock across lengths', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'final');
+  await preset(page, 'sprint');
   await expect(roundClock(page)).toHaveText('1:30');
   await expect(guessClock(page)).not.toBeVisible();
   for (let attempt = 0; attempt < 12; attempt++) await guess(page, attempt % 2 ? 'COAT' : 'CZZZ');
@@ -237,7 +237,7 @@ test('final sprint has unlimited guesses and one ninety-second clock across leng
 
 test('free rejections do not reset the guess clock, a checked guess does, and a saved preset waits for the next word', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'itv-five');
+  await preset(page, 'quickfire-five');
   await page.clock.runFor(4000);
   await guess(page, 'CHA');
   await expect(page.getByRole('status')).toContainText('Enter all 5 letters before checking.');
@@ -266,7 +266,7 @@ test('free rejections do not reset the guess clock, a checked guess does, and a 
 
 test('the guess clock keeps running with settings open', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'itv-four');
+  await preset(page, 'quickfire-four');
   await enterWord(page, 'CA');
   await openSettings(page);
   await page.clock.fastForward(10000);
@@ -277,7 +277,7 @@ test('the guess clock keeps running with settings open', async ({ page }) => {
 
 test('the final round clock keeps running with settings open', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'final');
+  await preset(page, 'sprint');
   await guess(page, 'COAT');
   await openSettings(page);
   await page.clock.fastForward(90000);
@@ -288,7 +288,7 @@ test('the final round clock keeps running with settings open', async ({ page }) 
 
 test('late submission after a suspended clock cannot turn expiry into a win', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'itv-five');
+  await preset(page, 'quickfire-five');
   // Advance Date without running timers: emulate JS suspended in a background tab.
   await page.clock.setSystemTime(new Date('2026-03-01T12:00:12Z'));
   await guess(page, 'CHAIR');
@@ -300,7 +300,7 @@ test('late submission after a suspended clock cannot turn expiry into a win', as
 
 test('returning to a suspended tab immediately reconciles the round deadline', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'final');
+  await preset(page, 'sprint');
   await page.clock.setSystemTime(new Date('2026-03-01T12:02:00Z'));
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
   await expect(page.getByRole('status')).toContainText('Round time is up');
@@ -308,7 +308,7 @@ test('returning to a suspended tab immediately reconciles the round deadline', a
 
 test('a completed final stops its clock instead of expiring on the result screen', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'final');
+  await preset(page, 'sprint');
   for (const word of ['CAMP', 'CHAIR']) {
     await guess(page, word);
     await page.getByRole('button', { name: 'Next length' }).click();
@@ -322,7 +322,7 @@ test('a completed final stops its clock instead of expiring on the result screen
 
 test('a timed preset persists across reload and starts a fresh guess clock', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'itv-four');
+  await preset(page, 'quickfire-four');
   await page.clock.runFor(4000);
   await expect(guessClock(page)).toHaveText('0:06');
   await page.reload();
@@ -330,12 +330,12 @@ test('a timed preset persists across reload and starts a fresh guess clock', asy
   await expect(guessClock(page)).toHaveText('0:10');
   await expect(bar(page, 'Guess')).toHaveJSProperty('value', 10);
   const reopened = await openSettings(page);
-  await expect(reopened.getByLabel('Preset')).toHaveValue('itv-four');
+  await expect(reopened.getByLabel('Preset')).toHaveValue('quickfire-four');
 });
 
 test('changing appearance does not restart a live clock or discard the entry', async ({ page }) => {
   await fixture(page);
-  await preset(page, 'itv-five');
+  await preset(page, 'quickfire-five');
   await enterWord(page, 'CH');
   await page.clock.runFor(4000);
   const dialog = await openSettings(page);
@@ -354,7 +354,7 @@ test.describe('mobile timed play', () => {
       await fixture(page);
       const dialog = await openSettings(page);
       await dialog.getByLabel('Appearance', { exact: true }).selectOption(theme);
-      await dialog.getByLabel('Preset').selectOption('final');
+      await dialog.getByLabel('Preset').selectOption('sprint');
       await dialog.getByRole('button', { name: 'Apply now' }).tap();
       for (const letter of 'COAT') await page.getByRole('button', { name: letter, exact: true }).tap();
       await page.getByRole('button', { name: 'Check guess' }).tap();
@@ -394,7 +394,7 @@ test.describe('mobile timed play', () => {
       await fixture(page);
       const dialog = await openSettings(page);
       await dialog.getByLabel('Appearance', { exact: true }).selectOption(theme);
-      await dialog.getByLabel('Preset').selectOption('final');
+      await dialog.getByLabel('Preset').selectOption('sprint');
       await dialog.getByRole('button', { name: 'Apply now' }).tap();
       const board = page.getByRole('group', { name: 'Guess board' });
       const initialHeight = await board.evaluate((element) => element.clientHeight);
@@ -432,7 +432,7 @@ test.describe('mobile timed play', () => {
       await fixture(page);
       const dialog = await openSettings(page);
       await dialog.getByLabel('Appearance', { exact: true }).selectOption(theme);
-      await dialog.getByLabel('Preset').selectOption('itv-four');
+      await dialog.getByLabel('Preset').selectOption('quickfire-four');
       await dialog.getByRole('button', { name: 'Apply now' }).tap();
       await expect(guessClock(page)).toHaveText('0:10');
       await expect(roundClock(page)).toHaveCount(0);

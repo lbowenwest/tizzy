@@ -28,13 +28,13 @@ describe('history records', () => {
     let exhausted = start(preset('practice'));
     for (let index = 0; index < 5; index++) exhausted = submitGuess(exhausted, 'cargo', allowed(5), 2000 + index * 1000).round;
     expect(toRecord(exhausted)).toMatchObject({ result: 'failed', reason: 'attempts', guesses: 5 });
-    expect(toRecord(submitGuess(start(preset('itv-five')), 'czzzz', allowed(5), 2000).round))
-      .toMatchObject({ group: 'itv-five', result: 'failed', reason: 'invalid', guesses: 0 });
-    expect(toRecord(advanceClock(start(preset('itv-four')), 11000)))
-      .toMatchObject({ group: 'itv-four', answer: 'camp', reason: 'word-time', durationMs: 10000 });
-    expect(toRecord(advanceClock(start(preset('final')), 91000)))
-      .toMatchObject({ group: 'final', format: 'sequence', reason: 'round-time' });
-    const unknown = submitGuess(start(preset('final')), 'czzz', allowed(4), 2000).round;
+    expect(toRecord(submitGuess(start(preset('quickfire-five')), 'czzzz', allowed(5), 2000).round))
+      .toMatchObject({ group: 'quickfire-five', result: 'failed', reason: 'invalid', guesses: 0 });
+    expect(toRecord(advanceClock(start(preset('quickfire-four')), 11000)))
+      .toMatchObject({ group: 'quickfire-four', answer: 'camp', reason: 'word-time', durationMs: 10000 });
+    expect(toRecord(advanceClock(start(preset('sprint')), 91000)))
+      .toMatchObject({ group: 'sprint', format: 'sequence', reason: 'round-time' });
+    const unknown = submitGuess(start(preset('sprint')), 'czzz', allowed(4), 2000).round;
     expect(toRecord(giveUp(unknown, 3000))).toMatchObject({ reason: 'given-up', guesses: 1, unknown: 1, durationMs: 2000 });
     // Rules no preset uses have no group, so they are not recorded.
     const custom = submitGuess(start({ ...preset('practice'), maxGuesses: 6 }), 'chair', allowed(5), 2000).round;
@@ -45,14 +45,14 @@ describe('history records', () => {
     expect(toRecord(submitGuess(start(preset('practice')), 'cargo', allowed(5), 2000).round)).toBeNull();
   });
   it('upserts by word, so a later result for the same word replaces the earlier one', () => {
-    const failed = make(2, { format: 'sequence', group: 'final', result: 'failed', reason: 'attempts' });
+    const failed = make(2, { format: 'sequence', group: 'sprint', result: 'failed', reason: 'attempts' });
     const once = addRecord([], failed);
     expect(addRecord(once, failed)).toEqual(once);
     expect(addRecord(once, { ...failed, reason: 'round-time', endedAt: 11 })).toEqual([{ ...failed, reason: 'round-time', endedAt: 11 }]);
   });
   it('keeps the round id across a sequence retry', () => {
     // Giving up pauses the final's clock, so 89 seconds remain after the retry starts.
-    const retry = nextWord(giveUp(start(preset('final')), 2000), data, preset('final'), () => 0, 5000);
+    const retry = nextWord(giveUp(start(preset('sprint')), 2000), data, preset('sprint'), () => 0, 5000);
     expect(toRecord(advanceClock(retry, 95000))).toMatchObject({ id: '5000:camp', roundId: 1000, reason: 'round-time' });
   });
   it('keeps the newest 1,000 records in finish order', () => {
@@ -72,13 +72,13 @@ describe('history summary', () => {
       make(1, { guesses: 3, durationMs: 1000 }),
       make(2, { result: 'failed', reason: 'attempts', guesses: 5 }),
       make(3, { guesses: 2, durationMs: 3000 }),
-      make(5, { group: 'itv-five', result: 'failed', reason: 'invalid', guesses: 0 }),
+      make(5, { group: 'quickfire-five', result: 'failed', reason: 'invalid', guesses: 0 }),
     ]);
     expect(summary.get('practice')).toEqual({
       played: 4, solved: 3, guessDistribution: [{ guesses: 2, count: 1 }, { guesses: 3, count: 2 }],
       currentStreak: 2, bestStreak: 2, averageSolveMs: 2000, rounds: null,
     });
-    expect(summary.get('itv-five')).toMatchObject({ played: 1, solved: 0, currentStreak: 0, bestStreak: 0, averageSolveMs: null });
+    expect(summary.get('quickfire-five')).toMatchObject({ played: 1, solved: 0, currentStreak: 0, bestStreak: 0, averageSolveMs: null });
     expect(summarizeHistory([]).size).toBe(0);
   });
   it('keeps the best streak after a failure resets the current one', () => {
@@ -88,7 +88,7 @@ describe('history summary', () => {
   });
   it('counts completed and expired sequence rounds, not words', () => {
     const sequence = (endedAt: number, roundId: number, length: WordLength, changes: Partial<HistoryRecord> = {}) =>
-      make(endedAt, { group: 'final', format: 'sequence', roundId, length, answer: data.answers[length][0], ...changes });
+      make(endedAt, { group: 'sprint', format: 'sequence', roundId, length, answer: data.answers[length][0], ...changes });
     const summary = summarizeHistory([
       sequence(1, 1, 4), sequence(2, 1, 5), sequence(3, 1, 6),
       sequence(4, 2, 4, { result: 'failed', reason: 'attempts' }), sequence(5, 2, 4, { result: 'failed', reason: 'round-time' }),
@@ -96,7 +96,7 @@ describe('history summary', () => {
       make(7, { group: 'sequence', length: 6, answer: 'castle' }),
       make(8, { group: 'sequence', format: 'sequence', roundId: 8, result: 'failed', reason: 'round-time' }),
     ]);
-    expect(summary.get('final')).toMatchObject({ played: 6, rounds: { completed: 1, expired: 1 } });
+    expect(summary.get('sprint')).toMatchObject({ played: 6, rounds: { completed: 1, expired: 1 } });
     expect(summary.get('sequence')).toMatchObject({ played: 2, rounds: { completed: 0, expired: 1 } });
   });
 });

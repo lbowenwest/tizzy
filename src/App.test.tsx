@@ -5,7 +5,7 @@ import { App } from './App';
 describe('app shell', () => {
   it('renders the initial loading state and shared header', () => {
     const markup = renderToStaticMarkup(<App />);
-    expect(markup).toContain('Word practice</h1>');
+    expect(markup).toContain('Tizzy</h1>');
     expect(markup).toContain('Loading word lists');
   });
 });

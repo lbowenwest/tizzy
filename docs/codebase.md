@@ -1,4 +1,4 @@
-# Lingo-inspired word practice: codebase architecture
+# Tizzy: codebase architecture
 
 This document records the agreed technical design. Player-facing rules and open game decisions live in [design.md](design.md).
 

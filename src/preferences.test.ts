@@ -14,14 +14,14 @@ describe('preferences', () => {
     for (const input of [null, '{', 'true', '{}', '{"theme":"unknown","preset":"practice"}', '{"theme":"club","preset":"custom"}']) {
       expect(parsePreferences(input).preset).toBe(defaults.preset);
     }
-    expect(parsePreferences('{"theme":"unknown","preset":"final"}')).toEqual({ theme: 'letterpress', preset: 'final' });
+    expect(parsePreferences('{"theme":"unknown","preset":"sprint"}')).toEqual({ theme: 'letterpress', preset: 'sprint' });
   });
   it('maps rules saved before presets-only to the preset they match', () => {
     const saved = (rules: object) => parsePreferences(JSON.stringify({ theme: 'afterhours', rules })).preset;
     for (const preset of presets) expect(saved(preset.rules)).toBe(preset.key);
     // Fields added since default as they did then: untimed, five guesses, no clue.
     expect(saved({ format: 'single', length: 4, invalid: 'reject' })).toBe('practice-four');
-    expect(saved({ format: 'single', length: 5, invalid: 'fail', wordClock: { mode: 'guess', seconds: 10 } })).toBe('itv-five');
+    expect(saved({ format: 'single', length: 5, invalid: 'fail', wordClock: { mode: 'guess', seconds: 10 } })).toBe('quickfire-five');
     expect(parsePreferences(JSON.stringify({ theme: 'afterhours', rules: { length: 6 } }))).toEqual({ theme: 'afterhours', preset: 'practice-six' });
   });
   it('falls back to Practice for custom or malformed saved rules', () => {
@@ -35,10 +35,10 @@ describe('preferences', () => {
 
 describe('presets', () => {
   it('defaults only the final to unlimited guesses while preserving its timer and policy', () => {
-    expect(presets.find(({ key }) => key === 'final')!.rules).toMatchObject({
+    expect(presets.find(({ key }) => key === 'sprint')!.rules).toMatchObject({
       maxGuesses: null, roundSeconds: 90, wordClock: { mode: 'off' }, invalid: 'consume',
     });
-    for (const preset of presets.filter(({ key }) => key !== 'final' && key !== 'in-one')) {
+    for (const preset of presets.filter(({ key }) => key !== 'sprint' && key !== 'in-one')) {
       expect(preset.rules).toMatchObject({ maxGuesses: 5, clue: false });
     }
   });
@@ -48,7 +48,7 @@ describe('presets', () => {
     expect(describeRules(inOne.rules)).toBe('5 letters · Starts with a clue only the answer fits; no first letter · 1 guess per word · Untimed · Unknown words are free to reject');
   });
   it('offers untimed practice at every length, then the sequence and timed presets', () => {
-    expect(presets.map(({ key }) => key)).toEqual(['practice-four', 'practice', 'practice-six', 'sequence', 'itv-four', 'itv-five', 'final', 'in-one']);
+    expect(presets.map(({ key }) => key)).toEqual(['practice-four', 'practice', 'practice-six', 'sequence', 'quickfire-four', 'quickfire-five', 'sprint', 'in-one']);
     for (const length of [4, 5, 6] as const) {
       expect(presets.find(({ rules }) => rules.format === 'single' && !rules.clue && rules.wordClock.mode === 'off' && rules.length === length)!.rules)
         .toEqual({ ...defaultRules, length });
@@ -56,13 +56,13 @@ describe('presets', () => {
   });
   it('identify their own rules and hand out independent copies', () => {
     for (const preset of presets) expect(getPresetKey(preset.rules)).toBe(preset.key);
-    const copy = presetRules('itv-five');
+    const copy = presetRules('quickfire-five');
     copy.wordClock.seconds = 20;
-    expect(presetRules('itv-five').wordClock.seconds).toBe(10);
+    expect(presetRules('quickfire-five').wordClock.seconds).toBe(10);
     expect(presetRules('retired')).toEqual(presetRules('practice'));
   });
   it('match no preset for changed configurations', () => {
-    const preset = presets.find(({ key }) => key === 'itv-five')!;
+    const preset = presets.find(({ key }) => key === 'quickfire-five')!;
     const changed = copyRules(preset.rules);
     changed.wordClock.seconds = 20;
     expect(getPresetKey(changed)).toBeNull();
@@ -72,7 +72,7 @@ describe('presets', () => {
   it('recognises presets despite settings the format or clock ignores', () => {
     const rulesFor = (key: string) => copyRules(presets.find((entry) => entry.key === key)!.rules);
     expect(getPresetKey({ ...rulesFor('sequence'), length: 4 })).toBe('sequence');
-    expect(getPresetKey({ ...rulesFor('final'), length: 6 })).toBe('final');
+    expect(getPresetKey({ ...rulesFor('sprint'), length: 6 })).toBe('sprint');
     expect(getPresetKey({ ...rulesFor('practice'), wordClock: { mode: 'off', seconds: 20 } })).toBe('practice');
     expect(getPresetKey({ ...rulesFor('practice'), roundSeconds: 90 })).toBe('practice');
     expect(getPresetKey({ ...rulesFor('practice'), length: 4 })).toBe('practice-four');

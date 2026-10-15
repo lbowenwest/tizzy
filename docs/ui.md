@@ -4,10 +4,10 @@
 
 Records the shared layout and mobile-first direction approved in conversation before the frontend implementation. Game rules remain in [design.md](design.md); technical ownership remains in [codebase.md](codebase.md). The [clickable studies](ui-prototypes.md) show the original direction.
 
-One compact playing screen; one placeholder **Word practice** identity. No promotional hero, side copy, ITV artwork or separate layouts for different themes.
+One compact playing screen; one **Tizzy** identity. No promotional hero, side copy, ITV or Lingo branding or separate layouts for different themes.
 
 ```text
-Word practice         How to play   History   Settings
+Tizzy                 How to play   History   Settings
 ┌───────────────────────────────────────────────────┐
 │ SINGLE WORD / 4 → 5 → 6                   Untimed │
 │ Find the five.                                    │
@@ -66,14 +66,14 @@ Desktop continuation returns focus to the non-editable guess display. Touch cont
 
 Use native modal dialogs with labelled headings, a close control, Escape dismissal and background inertness.
 
-Settings has a **Preset** selector, a preview of the chosen preset's rules, and Appearance; individual rules are not editable (see [design.md](design.md#play-and-configuration)). Presets are untimed Practice at 4, 5 and 6 letters, the untimed 4 → 5 → 6 sequence, ITV-style 4 and 5 letters, Final sprint and In one. The selector loads a preview, not a running game. The preview names the format, any clue, guesses per word, clock scopes/durations and unknown-word policy; Final sprint's describes unknown words as unscored. A consumed unknown guess (Final sprint) appears on the board with dashed tiles and ? marks (unscored, not absent); it gives no letter clues or keyboard updates, and shares a finite guess budget with accepted guesses. Under Unlimited it remains recorded but never exhausts a budget. The apply/save controls remain visible outside the dialog's scrolling fields on narrow screens.
+Settings has a **Preset** selector, a preview of the chosen preset's rules, and Appearance; individual rules are not editable (see [design.md](design.md#play-and-configuration)). Presets are untimed Practice at 4, 5 and 6 letters, Climb (the untimed 4 → 5 → 6 sequence), Quickfire at 4 and 5 letters, Sprint and In one. The selector loads a preview, not a running game. The preview names the format, any clue, guesses per word, clock scopes/durations and unknown-word policy; Sprint's describes unknown words as unscored. A consumed unknown guess (Sprint) appears on the board with dashed tiles and ? marks (unscored, not absent); it gives no letter clues or keyboard updates, and shares a finite guess budget with accepted guesses. Under Unlimited it remains recorded but never exhausts a budget. The apply/save controls remain visible outside the dialog's scrolling fields on narrow screens.
 
 Game settings are saved separately from the active round snapshot:
 - **Apply now** is the primary action; it explicitly restarts the whole current round using the previewed rules.
 - **Save for next round** preserves play and shows a pending-settings notice naming the saved rules. Each single word is a round; a sequence holds its settings, including the guess limit, through retries and advances until completion. The notice clears when those rules become active.
 - Closing without saving discards the rule draft, but immediate appearance changes remain.
 
-Help explains whole-word entry, duplicates, feedback, invalid-word outcomes, sequence retries and clocks. Each preset fixes its guess limit: five, except Final sprint (Unlimited) and In one (one try). Unlimited counters show the current guess number without a fictitious maximum. The active board, counters, help and result use the snapshotted limit.
+Help explains whole-word entry, duplicates, feedback, invalid-word outcomes, sequence retries and clocks. Each preset fixes its guess limit: five, except Sprint (Unlimited) and In one (one try). Unlimited counters show the current guess number without a fictitious maximum. The active board, counters, help and result use the snapshotted limit.
 
 ### History
 

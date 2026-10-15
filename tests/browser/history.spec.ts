@@ -75,7 +75,7 @@ test('records finished words and summarises them by preset across reloads', asyn
 test('groups presets separately and skips words left unfinished by Apply now or reload', async ({ page }) => {
   await fixture(page);
   await guess(page, 'CARGO');
-  await applyPreset(page, 'final');
+  await applyPreset(page, 'sprint');
   await guess(page, 'COAT');
   await guess(page, 'CAMP');
   await expect(page.getByRole('status')).toContainText('Nicely found');
@@ -84,12 +84,12 @@ test('groups presets separately and skips words left unfinished by Apply now or 
   await page.reload();
   await expect(page.getByLabel('Your guess', { exact: true })).toBeVisible();
   const dialog = await openHistory(page);
-  await expect(dialog.getByLabel('Group').getByRole('option')).toHaveText(['Final sprint · 90 seconds']);
+  await expect(dialog.getByLabel('Group').getByRole('option')).toHaveText(['Sprint · 90 seconds']);
   await expect(stat(page, 'Played')).toHaveText('1');
   await expect(stat(page, 'Rounds completed')).toHaveText('0');
   await expect(stat(page, 'Round time ran out')).toHaveText('0');
   await expect(recent(page)).toHaveCount(1);
-  await expect(recent(page).first()).toHaveText(/CAMP.*Solved.*2 guesses.*Final sprint/);
+  await expect(recent(page).first()).toHaveText(/CAMP.*Solved.*2 guesses.*Sprint/);
 });
 
 test('words recorded under custom settings are deleted', async ({ page }) => {

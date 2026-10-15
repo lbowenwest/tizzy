@@ -38,8 +38,8 @@ test('physical shortcuts and modal controls do not change play, and paste still 
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Preset').focus();
-  await page.keyboard.press('f');
-  await expect(dialog.getByLabel('Preset')).toHaveValue('final');
+  await page.keyboard.press('s');
+  await expect(dialog.getByLabel('Preset')).toHaveValue('sprint');
   await expect(page.locator('.guess-value')).toHaveText('');
   await page.keyboard.press('Escape');
   await expect(entry(page)).toHaveText('Tap letters below');

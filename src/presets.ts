@@ -15,19 +15,19 @@ export const presets: readonly { key: string; label: string; rules: Rules }[] = 
     rules: { ...copyRules(defaultRules), length: 6 },
   },
   {
-    key: 'sequence', label: '4 → 5 → 6 · untimed',
+    key: 'sequence', label: 'Climb · 4 → 5 → 6',
     rules: { ...copyRules(defaultRules), format: 'sequence' },
   },
   {
-    key: 'itv-four', label: 'ITV-style · 4 letters',
+    key: 'quickfire-four', label: 'Quickfire · 4 letters',
     rules: { ...copyRules(defaultRules), length: 4, invalid: 'fail', wordClock: { mode: 'guess', seconds: 10 } },
   },
   {
-    key: 'itv-five', label: 'ITV-style · 5 letters',
+    key: 'quickfire-five', label: 'Quickfire · 5 letters',
     rules: { ...copyRules(defaultRules), invalid: 'fail', wordClock: { mode: 'guess', seconds: 10 } },
   },
   {
-    key: 'final', label: 'Final sprint · 90 seconds',
+    key: 'sprint', label: 'Sprint · 90 seconds',
     rules: { ...copyRules(defaultRules), format: 'sequence', invalid: 'consume', maxGuesses: null, roundSeconds: 90 },
   },
   {

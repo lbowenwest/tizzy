@@ -22,7 +22,7 @@ test('the final can give up by keyboard without clearing guesses or applying pen
   await fixture(page);
   await expect(page.getByRole('button', { name: 'Give up', exact: true })).toHaveCount(0);
   let dialog = await settings(page);
-  await dialog.getByLabel('Preset', { exact: true }).selectOption('final');
+  await dialog.getByLabel('Preset', { exact: true }).selectOption('sprint');
   await dialog.getByRole('button', { name: 'Apply now', exact: true }).click();
   await guess(page, 'COAT');
   await enterWord(page, 'CA');
@@ -47,7 +47,7 @@ test('preset selection is a preview and Apply now explicitly starts those rules'
   await fixture(page);
   await enterWord(page, 'CHA');
   let dialog = await settings(page);
-  await dialog.getByLabel('Preset', { exact: true }).selectOption('itv-four');
+  await dialog.getByLabel('Preset', { exact: true }).selectOption('quickfire-four');
   const preview = dialog.getByRole('region', { name: 'Settings preview' });
   await expect(preview).toContainText('4 letters');
   await expect(preview).toContainText('5 guesses per word');
@@ -57,7 +57,7 @@ test('preset selection is a preview and Apply now explicitly starts those rules'
   await expect(page.getByRole('heading', { name: 'Find the five.' })).toBeVisible();
   await expect(page.getByRole('group', { name: 'Your guess', exact: true })).toHaveText('CHA');
   dialog = await settings(page);
-  await dialog.getByLabel('Preset', { exact: true }).selectOption('itv-four');
+  await dialog.getByLabel('Preset', { exact: true }).selectOption('quickfire-four');
   await dialog.getByRole('button', { name: 'Apply now', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
   await expect(page.getByRole('timer', { name: 'Guess time remaining' })).toBeVisible();
@@ -86,7 +86,7 @@ test('saving a preset preserves current play, signals the pending rules and pers
 test('the final previews, saves and restores unlimited guesses without changing the other presets', async ({ page }) => {
   await fixture(page);
   let dialog = await settings(page);
-  await dialog.getByLabel('Preset', { exact: true }).selectOption('final');
+  await dialog.getByLabel('Preset', { exact: true }).selectOption('sprint');
   const preview = dialog.getByRole('region', { name: 'Settings preview' });
   await expect(preview).toContainText('Unlimited guesses per word');
   await expect(preview).toContainText('90 seconds overall');
@@ -98,8 +98,8 @@ test('the final previews, saves and restores unlimited guesses without changing 
   await expect(page.getByText('Guess 1 · Unlimited', { exact: true })).toBeVisible();
   await expect(page.getByRole('timer', { name: 'Round time remaining' })).toBeVisible();
   dialog = await settings(page);
-  await expect(dialog.getByLabel('Preset', { exact: true })).toHaveValue('final');
-  await dialog.getByLabel('Preset', { exact: true }).selectOption('itv-five');
+  await expect(dialog.getByLabel('Preset', { exact: true })).toHaveValue('sprint');
+  await dialog.getByLabel('Preset', { exact: true }).selectOption('quickfire-five');
   await expect(dialog.getByRole('region', { name: 'Settings preview' })).toContainText('5 guesses per word');
   await dialog.getByRole('button', { name: 'Apply now', exact: true }).click();
   await expect(page.getByText('Guess 1 of 5')).toBeVisible();
@@ -112,8 +112,8 @@ test('settings offer presets only, including practice at every length', async ({
   await expect(dialog.getByRole('checkbox')).toHaveCount(0);
   await expect(dialog.getByRole('spinbutton')).toHaveCount(0);
   await expect(dialog.getByLabel('Preset', { exact: true }).getByRole('option')).toHaveText([
-    'Practice · 4 letters', 'Practice · 5 letters', 'Practice · 6 letters', '4 → 5 → 6 · untimed',
-    'ITV-style · 4 letters', 'ITV-style · 5 letters', 'Final sprint · 90 seconds', 'In one · 5 letters',
+    'Practice · 4 letters', 'Practice · 5 letters', 'Practice · 6 letters', 'Climb · 4 → 5 → 6',
+    'Quickfire · 4 letters', 'Quickfire · 5 letters', 'Sprint · 90 seconds', 'In one · 5 letters',
   ]);
   await expect(dialog.getByLabel('Preset', { exact: true })).toHaveValue('practice');
   await dialog.getByLabel('Preset', { exact: true }).selectOption('practice-four');
@@ -129,7 +129,7 @@ test('a saved preset waits for sequence completion, including same-length retrie
   await dialog.getByLabel('Preset', { exact: true }).selectOption('sequence');
   await dialog.getByRole('button', { name: 'Apply now', exact: true }).click();
   dialog = await settings(page);
-  await dialog.getByLabel('Preset', { exact: true }).selectOption('final');
+  await dialog.getByLabel('Preset', { exact: true }).selectOption('sprint');
   await dialog.getByRole('button', { name: 'Save for next round' }).click();
   for (let index = 0; index < 5; index++) await guess(page, 'COAT');
   await expect(page.getByText('5 of 5 guesses used')).toBeVisible();

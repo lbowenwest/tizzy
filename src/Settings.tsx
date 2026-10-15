@@ -33,7 +33,7 @@ export function Settings({ preferences, onTheme, onSave, onClose }: {
               {themes.map((theme) => <option value={theme} key={theme}>{names[theme]}</option>)}
             </select>
           </div>
-          <p className="settings-footnote">First letter supplied, except in In one: one checked word is given that only the answer fits, and words that don't fit are rejected with the reason. During play, clocks keep running in the background and while dialogs are open. Solves and Give up pause the round timer until you continue. A spent guess resets per-guess time; a free rejection does not. ITV-style presets adapt the timing for solo practice, without teams or prizes.</p>
+          <p className="settings-footnote">First letter supplied, except in In one: one checked word is given that only the answer fits, and words that don't fit are rejected with the reason. During play, clocks keep running in the background and while dialogs are open. Solves and Give up pause the round timer until you continue. A spent guess resets per-guess time; a free rejection does not. Quickfire presets give 10 seconds per guess.</p>
         </div>
         <div className="settings-apply">
           <div className="settings-actions">

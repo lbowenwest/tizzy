@@ -1,14 +1,14 @@
-# Lingo-inspired word practice: game design
+# Tizzy: game design
 
 ## Status and intent
 
 This document records the agreed player-facing game design. Technical architecture is documented separately in [codebase.md](codebase.md). Timed preset values and background behaviour have been agreed; the visual identity remains a placeholder.
 
-Build an original-branded, responsive English word game for unlimited practice on desktop and mobile. It takes inspiration from the ITV Lingo word puzzles but does not reproduce the show's branding, artwork, teams, prizes, or full TV format. There is no daily limit, account, multiplayer, or shared leaderboard.
+Build an original-branded, responsive English word game for unlimited practice on desktop and mobile. It takes inspiration from the ITV Lingo word puzzles but does not reproduce the show's branding, artwork, teams, prizes, or full TV format. The product is named Tizzy (approved 2026-10-15). "Lingo" is a registered trademark, so neither it nor ITV appears in the product name, preset names or public URLs; factual references to the inspiration stay in these docs. There is no daily limit, account, multiplayer, or shared leaderboard.
 
 ## Play and configuration
 
-A word puzzle supplies the first letter, except in [In one clue puzzles](#in-one-clue-puzzles). Players submit guesses of the word's length and receive feedback for letters in the right position and letters elsewhere in the answer. Letter feedback must handle duplicates consistently. The Lingo-style default is five attempts. The game supports 1–10 guesses per word or Unlimited, and each preset fixes its own limit. The final sprint uses Unlimited: its overall clock, not attempt exhaustion, limits play.
+A word puzzle supplies the first letter, except in [In one clue puzzles](#in-one-clue-puzzles). Players submit guesses of the word's length and receive feedback for letters in the right position and letters elsewhere in the answer. Letter feedback must handle duplicates consistently. The Lingo-style default is five attempts. The game supports 1–10 guesses per word or Unlimited, and each preset fixes its own limit. Sprint uses Unlimited: its overall clock, not attempt exhaustion, limits play.
 
 Players choose a **preset**; individual rules are not editable. Following owner feedback on 2026-10-15, custom settings were removed so that every finished word belongs to a preset and history compares like with like. Presets are ordinary configurations of the rules below, not distinct puzzle implementations. The game keeps supporting every choice in the table, so a new preset needs no new game code. Clocks are **off by default**. Selecting a preset only loads a preview of its format, guess count, clocks and unknown-word policy. **Apply now** replaces the current round with that preview; **Save for next round** keeps current play unchanged and shows a pending-settings notice. Closing without either action discards the choice. Timed presets enable their clocks when applied.
 
@@ -41,17 +41,17 @@ Use the [English Speller Database (ESDB, formerly SCOWL)](https://github.com/en-
 
 ## Presets and background behaviour
 
-The owner approved ITV-inspired timed presets alongside untimed practice, and later untimed practice at every length (2026-10-15):
+The owner approved show-inspired timed presets alongside untimed practice, and later untimed practice at every length (2026-10-15). Preset names describe the mode, not the show:
 
 | Preset | Format | Guesses per word | Unknown word | Word clock | Overall clock |
 | --- | --- | --- | --- | --- | --- |
 | Practice · 4 letters | Single, 4 letters | 5 | Reject | Off | Off |
 | Practice · 5 letters | Single, 5 letters | 5 | Reject | Off | Off |
 | Practice · 6 letters | Single, 6 letters | 5 | Reject | Off | Off |
-| 4 → 5 → 6 · untimed | Sequence | 5 | Reject | Off | Off |
-| ITV-style · 4 letters | Single, 4 letters | 5 | Fail word | Per guess, 10 seconds | Off |
-| ITV-style · 5 letters | Single, 5 letters | 5 | Fail word | Per guess, 10 seconds | Off |
-| Final sprint · 90 seconds | Sequence | Unlimited | Record unscored | Off | 90 seconds |
+| Climb · 4 → 5 → 6 | Sequence | 5 | Reject | Off | Off |
+| Quickfire · 4 letters | Single, 4 letters | 5 | Fail word | Per guess, 10 seconds | Off |
+| Quickfire · 5 letters | Single, 5 letters | 5 | Fail word | Per guess, 10 seconds | Off |
+| Sprint · 90 seconds | Sequence | Unlimited | Record unscored | Off | 90 seconds |
 | In one · 5 letters | Single, 5 letters, starts with a clue | 1 | Reject | Off | Off |
 
 These are **solo adaptations**, not a complete TV recreation. The main-round inspiration is ten seconds per guess with five guesses: on TV, invalid words or timeouts pass control to another team, which this app adapts to word failure. The final's inspiration is the earlier four-, five-, six-letter sprint within ninety seconds. The final defaults to unlimited guesses at every length, with unknown words recorded but no attempt penalty; only the overall deadline ends an unfinished final. Other presets use five guesses per word, except In one's single try. This app retains same-length retries, without TV money, teams, passing, larger puzzlewords or later-series gambles. The final's unknown-word policy is a practice choice, not a claim about TV penalties.

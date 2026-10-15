@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('the app opens with its shared player header', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Word practice' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tizzy' })).toBeVisible();
 });
 
 test('static word lists and attribution are served', async ({ request }) => {

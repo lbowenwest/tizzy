@@ -38,7 +38,7 @@ describe('deadline-based clocks', () => {
     });
 
   it('keeps the final playing beyond ten accepted and unknown guesses until its deadline', () => {
-    const config = presets.find(({ key }) => key === 'final')!.rules;
+    const config = presets.find(({ key }) => key === 'sprint')!.rules;
     let round = create(config);
     for (let index = 0; index < 12; index++) {
       round = submitGuess(round, index % 2 ? 'coat' : 'czzz', allowed, 2000 + index * 1000).round;
@@ -53,7 +53,7 @@ describe('deadline-based clocks', () => {
     expect(expired.guesses).toEqual(round.guesses);
   });
   it('retains unlimited guesses and the remaining final budget through every length', () => {
-    const config = presets.find(({ key }) => key === 'final')!.rules;
+    const config = presets.find(({ key }) => key === 'sprint')!.rules;
     let round = create(config);
     let now = 1000;
     for (const [length, wrong] of [[4, 'coat'], [5, 'cargo'], [6, 'candle']] as const) {

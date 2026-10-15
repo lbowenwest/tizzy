@@ -66,12 +66,12 @@ for (const theme of ['letterpress', 'afterhours', 'club']) {
   });
 }
 
-test('unknown words use an unscored guess in Final sprint, persist with the preset, and end ITV-style words', async ({ page }) => {
+test('unknown words use an unscored guess in Sprint, persist with the preset, and end Quickfire words', async ({ page }) => {
   await page.route('**/words/answers/4.txt', (route) => route.fulfill({ body: 'camp\n' }));
   await page.route('**/words/4.txt', (route) => route.fulfill({ body: 'camp\ncoat\n' }));
   await fixture(page);
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await page.getByLabel('Preset').selectOption('final');
+  await page.getByLabel('Preset').selectOption('sprint');
   await page.getByRole('button', { name: 'Apply now' }).click();
   await page.reload();
   await expect(input(page)).toBeVisible();
@@ -84,7 +84,7 @@ test('unknown words use an unscored guess in Final sprint, persist with the pres
   await expect(row.getByRole('img', { name: 'Z: unscored; word not in list' })).toHaveCount(3);
   await expect(page.getByRole('button', { name: 'Z', exact: true })).not.toHaveClass(/unavailable/);
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await page.getByLabel('Preset').selectOption('itv-five');
+  await page.getByLabel('Preset').selectOption('quickfire-five');
   await page.getByRole('button', { name: 'Apply now' }).click();
   await expect(page.getByText('Guess 1 of 5')).toBeVisible();
   await submit(page, 'CZZZZ');

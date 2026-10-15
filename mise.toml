@@ -1,3 +1,7 @@
+[tools]
+# Cloudflare deploy CLI used by npm run deploy.
+"npm:wrangler" = "4.151.0"
+
 [env]
 # Local dev settings, e.g. DEV_ALLOWED_HOSTS for tunnel access to the Vite dev server.
 _.file = ".env"

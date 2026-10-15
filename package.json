@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "npm run build && playwright test",
-    "words:build": "tsx scripts/build-wordlists.ts"
+    "words:build": "tsx scripts/build-wordlists.ts",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "react": "19.3.0",

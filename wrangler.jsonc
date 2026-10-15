@@ -1,0 +1,8 @@
+// Cloudflare Workers static-assets deployment: `npm run deploy` builds and uploads dist/.
+{
+  "name": "tizzy",
+  "compatibility_date": "2026-10-15",
+  "assets": {
+    "directory": "./dist"
+  }
+}

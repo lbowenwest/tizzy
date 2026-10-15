@@ -532,6 +532,83 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,.g
   color:var(--muted);
   line-height:1.5
 }
+.result-actions {
+  display:grid;
+  gap:8px;
+  flex-shrink:0;
+}
+dialog:has(.analysis) { width:min(660px,calc(100% - 24px)); scroll-padding-bottom:84px }
+.analysis { font-size:14px; line-height:1.6 }
+.analysis p { margin:10px 0 }
+.review-result { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 14px; padding-bottom:18px; border-bottom:1px solid var(--ink) }
+.review-result > strong { font:600 24px var(--display); letter-spacing:1px }
+.review-result > span { color:var(--muted); font-size:12px }
+.review-board-heading,.review-board button { display:grid; grid-template-columns:minmax(0,1fr) 72px 72px; gap:8px; align-items:center }
+.review-board-heading { font-size:10px; color:var(--muted); padding:10px 10px 6px }
+.review-board-heading > :not(:first-child) { text-align:center }
+.review-board { list-style:none; padding:0; margin:0 0 24px; max-height:260px; overflow:auto; scrollbar-width:thin }
+.review-board button { width:100%; border:1px solid transparent; border-bottom-color:var(--line); padding:8px 10px; background:none; border-radius:var(--radius); min-height:50px; text-align:left }
+.review-board button[aria-current] { background:var(--paper); border-color:var(--accent) }
+.review-board button:focus-visible { outline-offset:-3px }
+.review-board-word { display:flex; align-items:center; gap:10px; min-width:0 }
+.review-step { font-size:10px; color:var(--muted); min-width:10px }
+.review-tiles { display:inline-flex; gap:3px; min-width:0 }
+.review-tile { position:relative; display:grid; place-items:center; width:32px; height:36px; flex-shrink:1; border:1px solid var(--line); border-radius:2px; font:600 18px var(--tile-font); background:var(--paper); color:var(--ink); padding-bottom:3px }
+.review-tile.correct { background:var(--correct); border-color:var(--correct); color:var(--correct-ink) }
+.review-tile.present { background:var(--present); border-color:var(--present); color:var(--tile-ink) }
+.review-tile.absent { background:var(--absent); border-color:var(--absent); color:var(--tile-ink) }
+.review-tile.unscored { border-style:dashed }
+.review-tile small { position:absolute; right:2px; bottom:0; font:500 8px "IBM Plex Mono",monospace }
+.review-score,.review-left { text-align:center; font:600 24px var(--display) }
+.review-score { color:var(--accent) }
+.review-turn { border-top:2px solid var(--ink); padding-top:18px; scroll-margin:12px }
+.review-turn > .eyebrow { font-size:10px; margin:0 0 12px }
+.review-commentary h4 { font:600 27px/1.15 var(--display); letter-spacing:-.5px; margin:0 0 12px }
+.review-commentary p { line-height:1.65 }
+.review-caution { border-left:2px solid var(--accent); padding-left:12px; font-size:12px; color:var(--muted) }
+.review-remaining { margin:20px 0 }
+.review-remaining h4 { display:flex; align-items:center; gap:8px; font:600 13px "DM Sans",sans-serif; margin:0 0 10px }
+.review-remaining h4 span { font-size:11px; color:var(--muted); font-weight:400 }
+.review-remaining ul { list-style:none; display:flex; flex-wrap:wrap; gap:6px; padding:0; margin:0 }
+.review-remaining li { border:1px solid var(--line); padding:4px 8px; border-radius:var(--radius); font:500 12px "IBM Plex Mono",monospace; letter-spacing:.04em }
+.analysis summary { cursor:pointer; min-height:44px; padding:12px 0; font-size:12px; font-weight:600 }
+.analysis summary:focus-visible { outline:3px solid var(--focus); outline-offset:3px }
+.review-comparison { border-block:1px solid var(--line); margin:20px 0 0 }
+.review-comparison summary span { color:var(--muted); font-weight:400; margin-left:8px; font-size:11px }
+.review-comparison table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px; font-variant-numeric:tabular-nums }
+.review-comparison caption { text-align:left; color:var(--muted); font-size:11px; padding-bottom:12px }
+.review-comparison th,.review-comparison td { padding:10px 4px; border-bottom:1px solid var(--line); text-align:center; overflow-wrap:anywhere }
+.review-comparison th:first-child { text-align:left }
+.review-comparison thead th { font-weight:400; color:var(--muted); font-size:10px }
+.review-comparison thead strong { display:inline-block; font:600 17px var(--display); color:var(--ink); margin-top:4px }
+.review-comparison tbody th { font-weight:400 }
+.review-comparison p { font-size:12px; color:var(--muted) }
+.review-clue > .review-tiles { margin:4px 0 12px }
+.review-clue h3 { font:600 25px var(--display) }
+.review-clue ol { padding:0; list-style:none }
+.review-clue li { border-top:1px solid var(--line); padding-top:16px }
+.analysis-method { color:var(--muted); font-size:12px }
+.analysis-method summary { color:var(--ink) }
+.review-pagination { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; position:sticky; bottom:-24px; padding:12px 0; background:var(--surface); border-top:1px solid var(--line); margin-top:12px; z-index:1 }
+.review-pagination span { font:500 11px "IBM Plex Mono",monospace; color:var(--muted) }
+.review-pagination button { padding:10px; font-size:12px }
+.review-pagination button:disabled { opacity:.35; cursor:default }
+.analysis .analysis-footnote { color:var(--muted); font-size:10px; margin-top:12px }
+@media(max-width:480px) {
+  .review-board-heading,.review-board button { grid-template-columns:minmax(0,1fr) 42px 42px; gap:5px; padding-inline:4px }
+  .review-board-heading { font-size:9px }
+  .review-board-heading > span:first-child { max-width:120px }
+  .review-board-word { gap:5px }
+  .review-tile { width:23px; height:30px; font-size:15px }
+  .review-tiles { gap:2px }
+  .review-tile small { font-size:7px; right:1px }
+  .review-score,.review-left { font-size:21px }
+  .review-commentary h4 { font-size:24px }
+  .review-pagination { bottom:-20px; gap:8px }
+  .review-pagination button { font-size:11px; padding:10px 6px }
+  .review-comparison summary span { display:block; margin:2px 0 0 14px }
+  .review-comparison table { font-size:11px }
+}
 .load-screen {
   min-height:50dvh;
   display:grid;

@@ -17,6 +17,7 @@ A static client is enough for unlimited solo practice. It also means answers are
 | Round controller | Current puzzle, attempts, success/failure transitions, rule snapshot, format progression, clock policies, expiry precedence | State + player/clock action → next state and observable outcome |
 | Clock integration | Observe word and optional overall-round deadlines; deliver expiry actions | Expiry events, without deciding game outcomes |
 | Attempt history | Finished-word records, retention, per-group statistics and clearing | Finished round → upserted record; stored records → per-group summary |
+| Guess analysis | Replay prior evidence, partition candidate answers by feedback, compare legal guesses | `analysis.ts`: finished round + word data → information breakdown or clue explanation; active rounds return null |
 | React presentation | Board, input, settings, presets, results, and responsive keyboard/touch interaction | Renders round state and dispatches actions; never duplicates game rules |
 
 React's built-in state facilities are sufficient to host the controller; no second state-management system is needed. Presets are the only configurations players can choose, and they are ordinary `Rules` values rather than separate game implementations. The controller stays general (every clock scope, guess limit and unknown-word policy), so a new preset is a data change. Take a rules snapshot on round start and persist the chosen preset key separately in localStorage. A single-word session or a 4→5→6 sequence uses the same puzzle evaluator and word controller; the sequence is progression policy, not a new guessing algorithm.
@@ -29,6 +30,7 @@ History observes controller results; it is not a second rules path. `game.ts` st
 
 ### Current source ownership
 
+- `src/analysis.ts`: pure finished-word analysis using the existing duplicate-aware evaluator. Expected values depend on candidate answers only; actual feedback filters the next candidate set. `src/AnalysisDialog.tsx` renders the report and its metric explanations. `Play` holds a finished-round snapshot only while the dialog is open; analysis runs on demand, without adding work during typing or altering clock rules. No transcript is persisted.
 - `src/game.ts`: pure evaluation, transitions, deep rule snapshots and `advanceClock` deadline reconciliation. Word/round deadlines and end timestamps are state, not interval counters. `giveUp` reconciles deadlines before ending an active unlimited word; existing failure/continuation rules preserve sequence length and resume the paused overall budget with a rebased deadline. A null `maxGuesses` means Unlimited and suppresses attempt exhaustion without changing deadline precedence or scoring.
 - `src/useRoundClock.ts`: cleaned-up browser observations and wake-up events. It schedules a display refresh and calls the controller with wall time; no second expiry policy.
 - `scripts/build-wordlists.ts`: pinned-source checks, list curation and clue selection (see [wordlist.md](wordlist.md#clue-puzzles)); clue feedback comes from `evaluateGuess`, never a second evaluator.

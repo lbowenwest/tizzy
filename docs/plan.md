@@ -241,6 +241,12 @@ Owner feedback on 2026-10-15: History did not read well; rename it Stats and bre
 - **Acceptance:** rows include zeros and the ✗ row; the latest result's row is marked; choosing a mode follows the saved-preset → last-played → first rule; unplayed variants say Not played yet; the dialog fits 320px in every theme.
 - **Validation:** `npm test`, `npm run test:e2e`.
 
+## Finished-word guess analysis
+
+Owner requested information-based guess evaluation, then chose review after finishing a word (2026-10-15). Implemented: an **Analyse guesses** action on every ended word opens a themed dialog. The pure analysis module replays earlier feedback, compares all legal guesses against equally weighted curated answers, and reports entropy, expected/actual candidates remaining, solve probabilities and stronger information choices. It explains sole-answer and unscored attempts, and treats In one as clue interpretation. Reports remain available until continuation; saved Stats records are unchanged. Later presentation feedback requested the WordleBot approach: the report now uses a selectable coloured guess board, one-turn-at-a-time narrative, remaining-word chips, a collapsible side-by-side comparison and previous/next navigation. Info /100 retains the original information ratio; it is not a new skill metric.
+
+Validation: unit examples cover exact information/expected counts, legal probes, duplicate letters, no hindsight, repeated guesses, singleton solves, unscored attempts and clue contradictions. Browser checks cover post-word visibility, wins/losses/expiry, Sprint clock pause, focus restoration and reset, In one, and all three themes at 320px, 390px and desktop widths. Run `npm test`, `npm run build` and `npm run test:e2e`.
+
 ## Integrated acceptance and coordination
 
 Once the relevant slices are complete, run Vitest, Playwright at mobile/desktop viewports, and a production Vite build. Confirm attribution is shipped, no browser request reaches a live dictionary, word rules live outside React, all three invalid policies work, same-length retries and both clock scopes distinguish word from round failure, and settings survive reload. After H1–H2, finished words appear once in their preset group and history survives reload without affecting play. After C1–C3, every shipped clue has exactly one possible correct guess (enforced at build, test and play), In one plays end to end without a first letter, and ordinary modes and their tests are unchanged. Tests belong to each slice; this is a cross-slice check, not a separate implementation task.

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { isSequenceComplete, isRoundClockPaused, giveUp, nextWord, startRound, submitGuess, keyboardFeedback, type LetterFeedback, type Rules } from './game';
+import { isSequenceComplete, isRoundClockPaused, giveUp, nextWord, startRound, submitGuess, keyboardFeedback, type LetterFeedback, type Round, type Rules } from './game';
 import type { WordData } from './wordLists';
 import { useRoundClock } from './useRoundClock';
 import { describeRules, sameRules } from './presets';
 import { recordResult } from './history';
+import { AnalysisDialog } from './AnalysisDialog';
 
 const marks: Record<LetterFeedback, string> = { correct: '✓', present: '↔', absent: '×' };
 const descriptions: Record<LetterFeedback, string> = { correct: 'right place', present: 'elsewhere in word', absent: 'not in word' };
@@ -45,6 +46,7 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
   const now = useRoundClock(round, setRound);
   const [entry, setEntry] = useState('');
   const [message, setMessage] = useState('');
+  const [analysisRound, setAnalysisRound] = useState<Round | null>(null);
   const entryRef = useRef<HTMLDivElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
@@ -89,6 +91,7 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
     setMessage('');
   }
   function continuePlay() {
+    setAnalysisRound(null);
     setRound(nextWord(round, data, pendingRules));
     setEntry('');
     setMessage('');
@@ -207,7 +210,10 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
             {round.status === 'expired' && <p>The whole round has ended. Start a new round to try again.</p>}
             {sequence && round.status === 'lost' && <p>Solve another {round.length}-letter word to move on.</p>}
           </div>
-          <button ref={nextRef} className="primary" onClick={continuePlay}>{nextLabel} <span aria-hidden="true">→</span></button>
+          <div className="result-actions">
+            <button ref={nextRef} className="primary" onClick={continuePlay}>{nextLabel} <span aria-hidden="true">→</span></button>
+            <button className="secondary" onClick={() => setAnalysisRound(round)}>Analyse guesses</button>
+          </div>
         </div>}
         {active && <p id="feedback" className="feedback" role="status">{message || (first ? `Your next guess starts with ${first}.` : 'Only one word fits the clue.')}</p>}
         <div className="legend" aria-label="Letter feedback legend">
@@ -248,6 +254,7 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
           ? paused && !completed ? 'Timers paused until you continue.' : 'Clocks keep running during play, including across tabs.'
           : `${maxGuesses === null ? `Unlimited ${clue ? 'tries' : 'guesses'}` : count(maxGuesses, clue !== null)}. A fresh word whenever you like.`}</p>
       </section>
+      {analysisRound && <AnalysisDialog round={analysisRound} data={data} onClose={() => setAnalysisRound(null)} />}
     </main>
   );
 }

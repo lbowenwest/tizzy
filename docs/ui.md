@@ -62,6 +62,16 @@ A solve or failure keeps the checked board, reveals the answer, and replaces ent
 
 Desktop continuation returns focus to the non-editable guess display. Touch continuation never needs a native keyboard; a paired physical keyboard works even when focus returns to the document. No shared scoreboard or daily gate; personal history lives in its own dialog (see History).
 
+### Guess analysis
+
+Each finished-word result adds a secondary **Analyse guesses** button below its existing continuation button. There is no analysis control during play. It opens the existing native dialog pattern with title **Your guesses.**, answer and attempt count. Close/Escape restores focus to the analysis button; continuation clears the report. Opening the dialog does not change clock rules, so a paused result stays paused and an ordinary sequence failure still uses wall time.
+
+Following owner feedback, analysis uses a WordleBot-inspired review flow: a compact board of coloured guesses with **Info /100** and **Words left** columns, followed by one selected turn at a time. Clicking a guess or using **Previous / Next guess** changes the turn. The selected row is marked, the first is selected initially, and the navigation stays visible at the bottom while scrolling. Feedback retains text/symbol descriptions; unscored attempts and sole-answer turns show a dash instead of an information score.
+
+A short verdict and concrete prose lead each turn: possibilities before the guess, average expected words left, and the actual outcome. **Still possible** lists the remaining candidate words (first twelve plus an expandable remainder); a solve uses **Answer found**. **Compare the choices** opens a side-by-side table of the player's guess and the most informative alternative, showing bits, average words left and solve chance. Opening it brings the table into view. Last tries retain the solve-probability reminder. **About the analysis** explains the equal-weight model and makes clear that Info /100 is relative information value, not an overall skill/luck rating. In one shows the coloured clue and attempted word with the contradiction explanation. Empty attempts show an explicit empty state. The dialog uses each theme's existing typefaces and colours and scrolls vertically at narrow widths without horizontal overflow.
+
+The reference was the published [WordleBot review screenshot in Tom’s Guide](https://www.tomsguide.com/news/best-wordle-start-words), particularly its coloured board, turn-by-turn explanation and comparison table. Tizzy retains its own information model and does not claim NYT skill/luck scores.
+
 ## Settings and help
 
 Use native modal dialogs with labelled headings, a close control, Escape dismissal and background inertness.

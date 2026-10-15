@@ -4,7 +4,7 @@
 
 [Game design](design.md) defines the agreed rules; [codebase architecture](codebase.md) defines the agreed React/TypeScript/Vite approach. The shared mobile-first layout and selectable themes have been approved in conversation and are recorded in [ui.md](ui.md). No gameplay UI should be implemented from an invented layout. First obtain the word source, establish the application and its data-loading path, then produce and approve a UI design before building the game. This is a plan, not permission to execute it.
 
-The phases below identify observable checkpoints, not estimates or one task per file. F1–F3, U1 and G1–G7 are implemented for the approved solo practice scope, including editable ITV-inspired timing presets. Follow-up player feedback added 1–10 guesses per word and clarified preset preview versus Apply now/Save for next round, retaining round snapshots and five-guess preset defaults outside Final sprint. Further feedback made Final sprint unlimited per word, with its overall timer as the only failure limit; custom settings can also select Unlimited. Background continuation and consumed-guess timer resets were agreed in conversation and recorded in design.md. Later feedback pauses overall round time after a solve or Give up until explicit continuation, preserving the remaining budget; ordinary failures still use wall time. Physical iOS/native-keyboard validation is still outstanding. Use the agreed static React app, framework-independent puzzle and round logic, ESDB source, and no backend/account/daily limit/ITV assets.
+The phases below identify observable checkpoints, not estimates or one task per file. F1–F3, U1 and G1–G7 are implemented for the approved solo practice scope, including editable ITV-inspired timing presets. Follow-up player feedback added 1–10 guesses per word and clarified preset preview versus Apply now/Save for next round, retaining round snapshots and five-guess preset defaults outside Final sprint. Further feedback made Final sprint unlimited per word, with its overall timer as the only failure limit; custom settings can also select Unlimited. Background continuation and consumed-guess timer resets were agreed in conversation and recorded in design.md. Later feedback pauses overall round time after a solve or Give up until explicit continuation, preserving the remaining budget; ordinary failures still use wall time. Physical iOS/native-keyboard validation is still outstanding. Device-local attempt history was approved in conversation on 2026-10-14, recorded in design.md, ui.md and codebase.md, and implemented as H1–H2 below. Use the agreed static React app, framework-independent puzzle and round logic, ESDB source, and no backend/account/daily limit/ITV assets.
 
 ## Foundations
 
@@ -78,8 +78,59 @@ The phases below identify observable checkpoints, not estimates or one task per 
 - **Shape:** One validated configuration shape feeds both presets and custom controls; edits mark a preset custom. Persist editable settings with safe recovery from missing/corrupt localStorage. Keep the active round snapshot unchanged until the next round. Follow U1-approved settings UI; no preset-specific puzzle/controller implementation.
 - **Proof/handoff:** Vitest checks snapshot, preset/custom transitions, malformed storage and safe defaults. Playwright tests selecting/editing/reloading settings without altering an active round. Depends on G3–G6 and U1. The approved preset table and timing evidence are in `design.md`; timed configurations and untimed practice share the same validated rule path.
 
+## Attempt history
+
+Shared shape: the controller only stamps word identity and timing; one history module owns records, retention, grouping and statistics; Play is the single recorder; a History dialog only reads and clears. Dependency direction is `history → game, presets`, never the reverse.
+
+```text
+Play (round changes) ──status ≠ playing──▶ recordResult(round)
+                                              │ toRecord → addRecord (upsert by id, newest 1,000) → localStorage
+History dialog ──open──▶ loadHistory() ──▶ summarizeHistory(records) ──▶ per-group totals + recent words
+               ──Confirm clear──▶ clearHistory()
+```
+
+### H1 — Record finished words and summarise them
+
+- **Authority/outcome:** `design.md` Attempt history; `codebase.md` history ownership. A finished round yields exactly one stored record per word, and stored records yield the per-group statistics the design lists.
+- **Shape:**
+  - `src/game.ts`: add `startedAt` to every word (from `newWord`'s `now`) and `roundStartedAt` to every round (set by `startRound`, carried by sequence `nextWord`; a single word's equals its `startedAt`). No transition changes.
+  - New `src/history.ts`, following the `preferences.ts` split of pure functions plus thin storage wrappers. No generic storage abstraction or injected storage seam.
+    - `HistoryRecord`: `id` (`${startedAt}:${answer}`), `roundId` (`roundStartedAt`), `answer`, `length`, `format`, `group` (`getPresetKey(round.rules)`: a preset key or `custom`), `result` (`solved` or `failed`), `reason`, `guesses`, `unknown` (unscored guesses), `durationMs` (`endedAt − startedAt`), `endedAt`.
+    - Pure functions: `toRecord(round)` returns `null` while playing; `addRecord(records, record)` replaces an existing id, otherwise appends, then orders by `endedAt` and keeps the newest 1,000; `parseHistory(raw)` reads `{ version: 1, records }`, drops individually invalid records and returns `[]` for missing, corrupt or other-version data; `summarizeHistory(records)` returns, per group, played, solved, solved %, guess distribution by exact count (for solved words), current and best streak in `endedAt` order, average solve `durationMs`, and for sequences the completed rounds (a `roundId` with a solved 6-letter record) and expired rounds (a `roundId` with a `round-time` record).
+    - Wrappers on key `word-practice-history-v1`: `loadHistory()`, `recordResult(round)` (re-read, add, write) and `clearHistory()`, each swallowing storage errors like `savePreferences`.
+- **Acceptance:**
+  - **Normal:** solve, attempts loss, unknown-word failure, word timeout, round timeout and Give up each produce one record with the right result, reason, guesses, unknown count, duration and group. Practice, ITV and Final presets get their own keys; edited rules get `custom`.
+  - **Edge:** recording the same finished round twice changes nothing; a failed sequence word that later round-expires is replaced with `round-time`; a playing round records nothing; the 1,001st record evicts the oldest; a failure resets the current streak while the best streak survives; sequence completed and expired counts are per round, not per word; an empty history summarises to no groups.
+  - **Failure:** corrupt JSON, a wrong version or malformed records never throw. Blocked storage makes `recordResult` a no-op and `loadHistory` empty.
+- **Evidence anchors:** `src/game.ts` (`newWord`, `startRound`, `nextWord`, `Round`); `src/preferences.ts` (parse/load/save pattern and failure handling); `src/presets.ts` `getPresetKey`; `src/clocks.test.ts` (fixed-time controller fixtures to reuse).
+- **Dependencies/output:** none. Produces `recordResult`, `loadHistory`, `clearHistory`, `summarizeHistory` and `HistoryRecord` for H2.
+- **Validation:** `npm test` with a new `src/history.test.ts` that builds rounds through `startRound`/`submitGuess`/`advanceClock`/`giveUp`/`nextWord` with fixed `now` and `random`, then exercises the pure functions. Existing controller tests extend only to assert the new stamps.
+
+### H2 — Record during play and show the History dialog
+
+- **Authority/outcome:** `design.md` Attempt history; `ui.md` History. Real play records finished words, and the player can review and clear them.
+- **Shape:**
+  - `src/Play.tsx`: one effect, `if (round.status !== 'playing') recordResult(round)` keyed on `round`. Idempotent upserts absorb StrictMode re-runs and the failed-then-expired change. No other recording path.
+  - `src/App.tsx`: a History header button and a `'history'` dialog state using the existing `Dialog`.
+  - New `src/HistoryDialog.tsx` (not `History.tsx`, which collides with `history.ts` on case-insensitive filesystems): loads once on open, defaults the group selector to `getPresetKey(preferences.rules)` (falling back to the newest recorded group), renders the summary and the 50 newest records, and implements the two-step clear locally.
+  - `src/styles.css`: header and dialog layout. Reuse the existing field, list and dialog styles across the three themes.
+- **Acceptance:**
+  - Solving and failing words updates played, solved %, streaks, guess distribution and the newest-first recent list.
+  - Switching groups separates Practice from Final.
+  - Apply now mid-word and reload mid-word add nothing.
+  - A failed sequence word whose round then expires appears once, as round time.
+  - History survives reload.
+  - Clear history then Cancel keeps it; Confirm clear empties it.
+  - Corrupt history storage shows **No finished words yet.** and play still works.
+  - Keyboard users can open, use and Escape-dismiss the dialog.
+  - At 320px and 390px the header and dialog have no horizontal overflow.
+  - The result screen is unchanged.
+- **Evidence anchors:** `src/App.tsx` header and dialog state; `src/Dialog.tsx`; `src/Settings.tsx` (labelled select and action layout); `tests/browser/timers.spec.ts` `fixture` (routed word lists, controlled clock); `tests/browser/shell.spec.ts` (narrow-layout checks).
+- **Dependencies/output:** consumes H1's interface; completes the feature.
+- **Validation:** `npm run test:e2e` with a new `tests/browser/history.spec.ts` in both projects. Inspect desktop, 320px and 390px screenshots in all three themes.
+
 ## Integrated acceptance and coordination
 
-Once the relevant slices are complete, run Vitest, Playwright at mobile/desktop viewports, and a production Vite build. Confirm attribution is shipped, no browser request reaches a live dictionary, word rules live outside React, all three invalid policies work, same-length retries and both clock scopes distinguish word from round failure, and settings survive reload. Tests belong to each slice; this is a cross-slice check, not a separate implementation task.
+Once the relevant slices are complete, run Vitest, Playwright at mobile/desktop viewports, and a production Vite build. Confirm attribution is shipped, no browser request reaches a live dictionary, word rules live outside React, all three invalid policies work, same-length retries and both clock scopes distinguish word from round failure, and settings survive reload. After H1–H2, finished words appear once in their preset group and history survives reload without affecting play. Tests belong to each slice; this is a cross-slice check, not a separate implementation task.
 
-**Order:** F1 and F2 can be done independently; F3 consumes both. U1 is a design/approval gate before G2 presentation. G1 can proceed from F1/F3 while U1 is reviewed. Then G2 → G3 → G4 → G5 → G6 → G7 share the controller and UI and should be integrated in dependency order. Do not use parallel implementation on overlapping React/controller surfaces. The timer-background and preset-value decisions were resolved before timed implementation; actual-device mobile testing remains a separate evidence gap.
+**Order:** F1 and F2 can be done independently; F3 consumes both. U1 is a design/approval gate before G2 presentation. G1 can proceed from F1/F3 while U1 is reviewed. Then G2 → G3 → G4 → G5 → G6 → G7 share the controller and UI and should be integrated in dependency order. Do not use parallel implementation on overlapping React/controller surfaces. The timer-background and preset-value decisions were resolved before timed implementation; actual-device mobile testing remains a separate evidence gap. H1 → H2 run directly in order by one implementer: H2 touches the same App/Play surfaces, so parallel work would only add merge risk.

@@ -7,7 +7,7 @@ Records the shared layout and mobile-first direction approved in conversation be
 One compact playing screen; one placeholder **Word practice** identity. No promotional hero, side copy, ITV artwork or separate layouts for different themes.
 
 ```text
-Word practice                   How to play   Settings
+Word practice         How to play   History   Settings
 ┌───────────────────────────────────────────────────┐
 │ SINGLE WORD / 4 → 5 → 6                   Untimed │
 │ Find the five.                                    │
@@ -60,7 +60,7 @@ A solve or failure keeps the checked board, reveals the answer, and replaces ent
 - Word expiry: **Word time is up**, with the usual next-word or same-length retry action.
 - Overall expiry: **Round time is up**, with **New round**; it cannot continue at the old length.
 
-Desktop continuation returns focus to the non-editable guess display. Touch continuation never needs a native keyboard; a paired physical keyboard works even when focus returns to the document. No scoreboard or daily gate.
+Desktop continuation returns focus to the non-editable guess display. Touch continuation never needs a native keyboard; a paired physical keyboard works even when focus returns to the document. No shared scoreboard or daily gate; personal history lives in its own dialog (see History).
 
 ## Settings and help
 
@@ -74,6 +74,10 @@ Game settings are saved separately from the active round snapshot:
 - Closing without saving discards the rule draft, but immediate appearance changes remain.
 
 Help explains whole-word entry, duplicates, feedback, invalid-word outcomes, sequence retries and clocks. The per-word guess limit is configurable from one to ten or Unlimited. Five is the default except for Final sprint. Unlimited counters show the current guess number without a fictitious maximum. The active board, counters, help and result use the snapshotted limit.
+
+### History
+
+A **History** header button opens a native modal dialog with the same heading, close control and Escape behaviour as Settings and Help. It opens on the group matching the saved settings, with a labelled selector for other recorded groups. Statistics are text first: words played, solved percentage, guess distribution as labelled rows with bars as reinforcement only, current and best streak, and average solve time in minutes:seconds; sequence groups add rounds completed and rounds whose time ran out. Below them, the 50 most recent words are listed newest first with answer, result, guesses used and group. An empty group or history shows **No finished words yet.** **Clear history** is a two-step control inside the dialog (Clear history, then Confirm clear or Cancel) rather than a browser confirm. Blocked or corrupt history storage shows the empty state and never prevents play. The three header buttons must fit a 320px viewport without horizontal overflow.
 
 ### Clock presentation
 
@@ -100,6 +104,6 @@ Playwright covers real tap events in touch-emulated Chromium, rather than only r
 
 ## Current implementation boundary
 
-The React frontend implements untimed/timed single-word and sequence play, all three invalid-word policies, independent clock scopes, the three themes, editable presets and local persistence. See [design.md](design.md#presets-and-background-behaviour) for the preset table, TV timing evidence and solo adaptation boundaries. Older preferences gain the five-guess default without losing their existing choices or clocks; explicitly saved limits are not silently replaced. Select Final sprint again and Apply now to use its new unlimited default. Unlimited choices persist and restore like finite limits.
+The React frontend implements untimed/timed single-word and sequence play, all three invalid-word policies, independent clock scopes, the three themes, editable presets, local persistence and device-local History. See [design.md](design.md#presets-and-background-behaviour) for the preset table, TV timing evidence and solo adaptation boundaries. Older preferences gain the five-guess default without losing their existing choices or clocks; explicitly saved limits are not silently replaced. Select Final sprint again and Apply now to use its new unlimited default. Unlimited choices persist and restore like finite limits.
 
 The isolated prototype's frozen clocks remain visual examples, not the production timing implementation. Physical-device Safari/native-keyboard testing remains outstanding; controlled-time Chromium tests cover background catch-up and expiry guards.

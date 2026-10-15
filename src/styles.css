@@ -693,6 +693,80 @@ dialog:has(.settings-form) > :is(.dialog-heading,h2) {
 .settings-form .field {
   scroll-margin-block:12px;
 }
+.history h3 {
+  font:600 18px var(--display);
+  margin:22px 0 10px
+}
+.history-empty {
+  margin:0
+}
+.history-stats {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+  gap:8px;
+  margin:16px 0 0
+}
+.history-stats div {
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--paper);
+  padding:10px
+}
+.history-stats dt {
+  font-size:11px;
+  color:var(--muted)
+}
+.history-stats dd {
+  margin:4px 0 0;
+  font:600 22px var(--display)
+}
+.guess-distribution,.recent-words {
+  list-style:none;
+  padding:0;
+  margin:0
+}
+.guess-distribution li {
+  display:grid;
+  grid-template-columns:2ch 1fr 4ch;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+  margin-bottom:6px
+}
+.guess-distribution li span:last-child {
+  text-align:right
+}
+.distribution-bar {
+  height:12px;
+  width:calc(var(--share) * 100%);
+  min-width:4px;
+  background:var(--accent);
+  border-radius:var(--radius)
+}
+.recent-words li {
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px 12px;
+  align-items:baseline;
+  padding:8px 0;
+  border-bottom:1px solid var(--line);
+  font-size:12px;
+  color:var(--muted)
+}
+.recent-words strong {
+  font-family:var(--tile-font);
+  color:var(--ink);
+  min-width:7ch
+}
+.recent-words li[data-result="solved"] span:first-of-type {
+  color:var(--ink)
+}
+.history-clear {
+  margin-top:20px
+}
+.history-clear > button {
+  width:100%
+}
 .pending-settings {
   border-left:3px solid var(--accent);
   font-size:11px;

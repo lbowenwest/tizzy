@@ -3,6 +3,7 @@ import { loadWordData, type WordData } from './wordLists';
 import { Play } from './Play';
 import { Dialog } from './Dialog';
 import { Settings } from './Settings';
+import { HistoryDialog } from './HistoryDialog';
 import { loadPreferences, savePreferences, type Preferences } from './preferences';
 
 type LoadState = { status: 'loading' } | { status: 'loaded'; data: WordData } | { status: 'error' };
@@ -10,7 +11,7 @@ type LoadState = { status: 'loading' } | { status: 'loaded'; data: WordData } | 
 export function App() {
   const [load, setLoad] = useState<LoadState>({ status: 'loading' });
   const [preferences, setPreferences] = useState<Preferences>(loadPreferences);
-  const [dialog, setDialog] = useState<'settings' | 'help' | null>(null);
+  const [dialog, setDialog] = useState<'settings' | 'help' | 'history' | null>(null);
   const [roundKey, setRoundKey] = useState(0);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -31,6 +32,7 @@ export function App() {
           <h1 className="wordmark"><span className="brand-symbol" aria-hidden="true">w.</span>Word practice</h1>
           <div className="header-actions">
             <button className="quiet" onClick={() => setDialog('help')}>How to play</button>
+            <button className="quiet" onClick={() => setDialog('history')}>History</button>
             <button className="settings-button" onClick={() => setDialog('settings')}>Settings <span aria-hidden="true">↗</span></button>
           </div>
         </header>
@@ -48,6 +50,7 @@ export function App() {
           if (restart) setRoundKey((key) => key + 1);
           setDialog(null);
         }} />}
+      {dialog === 'history' && <HistoryDialog rules={preferences.rules} onClose={() => setDialog(null)} />}
       {dialog === 'help' && <Dialog title="Follow the letters." titleId="help-title" onClose={() => setDialog(null)}>
         <p>You get the first letter and a configurable guess limit (five by default). Choose 1–10 guesses per word or Unlimited in Settings. Final sprint uses unlimited guesses with a 90-second overall clock. With Unlimited, Give up reveals the answer; continue explicitly with another word at the same sequence length. The round clock pauses after giving up or solving a word and resumes with the same remaining time when you continue. Tap the letter keys to enter the whole word, including the first letter, then tap ENTER. Delete removes the last letter. Physical keyboards and pasting work too; the guess display is not a text field and won't open a mobile keyboard. Keys show the strongest checked feedback: ✓ right place, ↔ elsewhere, or × absent. All keys remain usable.</p>
         <ul className="help-list"><li>✓ Right place: that letter is exactly where it belongs.</li><li>↔ Elsewhere: the letter is in the answer, in another position.</li><li>× Not in word: no unmatched copy of that letter remains.</li></ul>

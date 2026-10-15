@@ -4,7 +4,7 @@ This document records the agreed technical design. Player-facing rules and open 
 
 ## Stack and deployment
 
-Use React and TypeScript with Vite, plain CSS, Vitest for logic tests, and Playwright for browser tests. Deploy the built site and its word data as static assets. The app needs no backend, database, live dictionary API, UI kit, or general-purpose state-management library. Browser localStorage remembers settings; it does not provide cross-device sync or persistent in-progress rounds.
+Use React and TypeScript with Vite, plain CSS, Vitest for logic tests, and Playwright for browser tests. Deploy the built site and its word data as static assets. The app needs no backend, database, live dictionary API, UI kit, or general-purpose state-management library. Browser localStorage remembers settings and finished-word history; it does not provide cross-device sync or persistent in-progress rounds.
 
 A static client is enough for unlimited solo practice. It also means answers are available in client-side assets/state: this is not a tamper-proof competitive game. Authoritative scoring or anti-cheat would require a different trust boundary, not merely another browser module.
 
@@ -16,11 +16,14 @@ A static client is enough for unlimited solo practice. It also means answers are
 | Puzzle evaluator | Candidate validity and duplicate-aware letter feedback | Answer + submitted guess + accepted words → validity or feedback; independent of React and clocks |
 | Round controller | Current puzzle, attempts, success/failure transitions, rule snapshot, format progression, clock policies, expiry precedence | State + player/clock action → next state and observable outcome |
 | Clock integration | Observe word and optional overall-round deadlines; deliver expiry actions | Expiry events, without deciding game outcomes |
+| Attempt history | Finished-word records, retention, per-group statistics and clearing | Finished round → upserted record; stored records → per-group summary |
 | React presentation | Board, input, settings, presets, results, and responsive keyboard/touch interaction | Renders round state and dispatches actions; never duplicates game rules |
 
 React's built-in state facilities are sufficient to host the controller; no second state-management system is needed. Presets provide configurations through the same path as custom settings, not separate game implementations. Take a settings snapshot on round start and persist the player's editable settings separately in localStorage. A single-word session or a 4→5→6 sequence uses the same puzzle evaluator and word controller; the sequence is progression policy, not a new guessing algorithm.
 
 The controller owns whether an invalid candidate is rejected, consumes an unscored attempt, or ends the word, whether a word timeout requires a same-length replacement, and whether an overall timeout ends the multi-word round. Clock integration schedules observations from deadlines rather than treating browser interval ticks as authoritative elapsed time. If both deadlines have expired, the controller gives overall-round expiry precedence. The approved background policy is elapsed wall time during active play: timers continue during suspension, tab switches and dialogs; a paused result stays paused. Reconcile on visibility/focus/pageshow and before player transitions, using the latest state rather than a captured word. Ordinary failure results still expire an unfinished sequence. Solves and give-ups pause the overall clock; `isRoundClockPaused` is the shared controller, observer and presentation predicate. The result's existing end timestamp anchors its precise remaining budget, and continuation rebases its deadline on current wall time without a refill. Successful final completion stops it.
+
+History observes controller results; it is not a second rules path. `game.ts` stamps each word's `startedAt` and its round's `roundStartedAt`, and depends on neither history nor presets. `src/history.ts` derives a record from a finished round, including its group from `getPresetKey` on the round's snapshotted rules, and upserts it by word identity so repeated observations and a later round expiry replace rather than duplicate. It keeps the newest 1,000 records and computes statistics from records alone. Like `preferences.ts`, it pairs pure parse/update/summary functions with thin localStorage wrappers that fall back safely; each save re-reads storage so another open tab's records are not overwritten wholesale. Play is the only recorder: it records whenever the round it holds is not playing.
 
 ### Current source ownership
 
@@ -28,6 +31,7 @@ The controller owns whether an invalid candidate is rejected, consumes an unscor
 - `src/useRoundClock.ts`: cleaned-up browser observations and wake-up events. It schedules a display refresh and calls the controller with wall time; no second expiry policy.
 - `src/presets.ts`: ordinary rule configurations, play-equivalent rule equality for preset recognition/pending notices (via `normalizeRules` in `game.ts`, which ignores sequence length, off-clock seconds and single-word round time), and human-readable rule previews.
 - `src/preferences.ts`: validated local persistence; existing untimed preferences gain off-by-default clocks without losing their other choices.
+- `src/history.ts`: finished-word records, upsert by word identity, newest-1,000 retention, per-group statistics and safe localStorage wrappers. `src/HistoryDialog.tsx` only reads, presents and clears them.
 - `src/Play.tsx` and `src/Settings.tsx`: rendering, non-editable guess display, touch-key dispatch, guarded physical-keyboard/paste events and editable drafts. Keyboard feedback uses the controller's strongest per-letter evidence; no text field is needed during play. Native form validation prevents saving incomplete/invalid duration fields. The per-word guess limit drives controller exhaustion and finite board rows. Unlimited rows grow from actual history inside a bounded, focusable scrolling viewport; all checked and unfinished rows remain available after expiry. Only presentation owns scrolling; settings actions stay outside the scrolling form fields.
 
 ## Word-list preparation
@@ -38,6 +42,7 @@ Use the [English Speller Database (ESDB, formerly SCOWL)](https://github.com/en-
 
 - **Vitest through the puzzle evaluator:** candidate validity, first-letter and length constraints, exact/misplaced/absent letters, and duplicate letters.
 - **Vitest through the round controller:** accepted guesses, all three invalid-word policies, configurable attempt exhaustion, unlimited guesses at every final length, final-guess wins, legacy guess-limit defaults, per-guess resets versus per-word continuity, word versus overall expiry, simultaneous expiry, same-length replacement, length advancement, and settings snapshots.
+- **Vitest through the history module:** record derivation from real controller transitions, idempotent upserts, expiry replacement, retention, grouping, statistics and malformed storage.
 - **Playwright in the browser:** keyboard and touch-friendly input, desktop/mobile layouts, settings and presets, untimed single-word play, and timed multi-word play.
 
 Keep the game rules testable through the same controller interface React uses. Presentation tests should cover interaction and layout rather than reimplementing the puzzle evaluator's exhaustive cases.

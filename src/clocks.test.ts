@@ -164,6 +164,14 @@ describe('deadline-based clocks', () => {
     expect(fresh.roundDeadline).toBe(22000);
     expect(advanceClock(fresh, 11000)).toBe(fresh);
   });
+  it('stamps each word start and carries the round start through a sequence only', () => {
+    const sequence = create(rules({ format: 'sequence' }));
+    expect(sequence).toMatchObject({ startedAt: 1000, roundStartedAt: 1000 });
+    const solved = submitGuess(sequence, 'camp', allowed, 3000).round;
+    expect(advance(solved)).toMatchObject({ startedAt: 5000, roundStartedAt: 1000 });
+    const single = submitGuess(create(rules()), 'camp', allowed, 3000).round;
+    expect(advance(single, rules())).toMatchObject({ startedAt: 5000, roundStartedAt: 5000 });
+  });
   it('deep-copies the clock settings at round start', () => {
     const config = rules({ wordClock: { mode: 'guess', seconds: 10 } });
     const round = create(config);

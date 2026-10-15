@@ -3,6 +3,7 @@ import { isSequenceComplete, isRoundClockPaused, giveUp, nextWord, startRound, s
 import type { WordData } from './wordLists';
 import { useRoundClock } from './useRoundClock';
 import { describeRules, sameRules } from './presets';
+import { recordResult } from './history';
 
 const marks: Record<LetterFeedback, string> = { correct: '✓', present: '↔', absent: '×' };
 const descriptions: Record<LetterFeedback, string> = { correct: 'right place', present: 'elsewhere in word', absent: 'not in word' };
@@ -50,6 +51,8 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
   const first = round.answer[0].toUpperCase();
   const maxGuesses = round.rules.maxGuesses;
   const knowledge = keyboardFeedback(round.guesses);
+  // Record each finished word; repeat observations and a later round expiry replace, never duplicate.
+  useEffect(() => { recordResult(round); }, [round]);
   useEffect(() => {
     if (maxGuesses === null && boardRef.current) boardRef.current.scrollTop = boardRef.current.scrollHeight;
   }, [maxGuesses, round.guesses.length, round.answer, round.status]);

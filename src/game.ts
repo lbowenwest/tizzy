@@ -37,6 +37,8 @@ export type Round = {
   reason?: 'attempts' | 'invalid' | 'word-time' | 'round-time' | 'given-up';
   wordDeadline: number | null;
   roundDeadline: number | null;
+  startedAt: number;
+  roundStartedAt: number;
   endedAt: number | null;
 };
 export const guessOptions: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -90,7 +92,7 @@ export function evaluateCandidate(answer: string, input: string, allowed: Readon
 }
 
 function newWord(data: WordData, rules: Rules, length: WordLength, now: number,
-  roundDeadline: number | null, previous?: string, random = Math.random): Round {
+  roundDeadline: number | null, roundStartedAt: number, previous?: string, random = Math.random): Round {
   const pool = data.answers[length];
   const alternatives = pool.filter((answer) => answer !== previous);
   const candidates = alternatives.length ? alternatives : pool;
@@ -99,13 +101,13 @@ function newWord(data: WordData, rules: Rules, length: WordLength, now: number,
   return {
     answer, length, rules: copyRules(rules), guesses: [], status: 'playing',
     wordDeadline: rules.wordClock.mode === 'off' ? null : now + rules.wordClock.seconds * 1000,
-    roundDeadline, endedAt: null,
+    roundDeadline, startedAt: now, roundStartedAt, endedAt: null,
   };
 }
 
 export function startRound(data: WordData, rules: Rules, previous?: string, random = Math.random, now = Date.now()): Round {
   const roundDeadline = rules.format === 'sequence' && rules.roundSeconds !== null ? now + rules.roundSeconds * 1000 : null;
-  return newWord(data, rules, rules.format === 'sequence' ? 4 : rules.length, now, roundDeadline, previous, random);
+  return newWord(data, rules, rules.format === 'sequence' ? 4 : rules.length, now, roundDeadline, now, previous, random);
 }
 
 export function isSequenceComplete(round: Round): boolean {
@@ -144,7 +146,7 @@ export function nextWord(round: Round, data: WordData, nextRules: Rules, random 
     const length = round.status === 'won' ? (round.length + 1) as WordLength : round.length;
     const roundDeadline = round.roundDeadline !== null && isRoundClockPaused(round)
       ? now + Math.max(0, round.roundDeadline - round.endedAt!) : round.roundDeadline;
-    return newWord(data, round.rules, length, now, roundDeadline, round.answer, random);
+    return newWord(data, round.rules, length, now, roundDeadline, round.roundStartedAt, round.answer, random);
   }
   return startRound(data, nextRules, round.answer, random, now);
 }

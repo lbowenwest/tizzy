@@ -56,6 +56,14 @@ Timing evidence: [Lingo (British game show), revival gameplay](https://en.wikipe
 
 All durations are editable positive whole seconds. During play, timers use elapsed wall time and **continue across tab switches, browser suspension and open dialogs**. Returning to an active suspended tab reconciles its deadlines immediately. A late submission or give-up action cannot bypass expiry. **Solving a word or giving up pauses the overall clock until explicit continuation**, including while dialogs are open or the page is suspended. Continuation resumes the exact remaining milliseconds rather than refilling the round budget; each new word's own clock still gets its configured duration. Ordinary word failures (attempt exhaustion, unknown-word failure or word timeout) retain the running-overall-clock policy. A successful final stops its clock permanently until a fresh round. Word results stop that word's own clock.
 
+## Attempt history
+
+Finished words are recorded on this device so a player can see how they have done over time. A word is recorded once it has a result: solved, attempts used up, unknown-word failure, word or round timeout, or Give up. If the overall clock expires while a failed sequence word's result is displayed, that word's record takes the round-expiry result instead of gaining a second entry. Unfinished words (replaced by Apply now, or abandoned by a reload or closed tab) are not recorded; this is solo practice, not a tamper-proof record.
+
+History is grouped by the preset its round's rules matched when the round started; every other configuration shares one **Custom** group. Each group shows words played, solved percentage, the distribution of guesses used for solved words, current and best solve streaks (consecutive solved words; any failure ends a streak) and average solve time. Sequence groups also count completed rounds and rounds whose overall clock ran out. A recent-words list shows each answer, result, guesses used and group. History retains the 1,000 most recent words; totals and best streaks cover only retained words. The player can clear it after confirmation.
+
+There is no account, sync, shared leaderboard, date-based streak or daily goal, and the result screen is unchanged.
+
 ## Deliberately open details
 
 Final visual identity can be determined later. Physical-device iOS/background suspension checks remain a validation limitation, not an unspecified timer policy.

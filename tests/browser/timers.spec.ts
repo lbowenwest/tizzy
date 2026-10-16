@@ -38,7 +38,7 @@ test('guess expiry preserves checked guesses plus the unfinished row until the n
   const checked = page.getByRole('group', { name: 'Guess 1', exact: true });
   await expect(checked.getByRole('img', { name: 'C: right place', exact: true })).toBeVisible();
   await page.clock.fastForward(10000);
-  await expect(page.getByRole('status')).toContainText('Word time is up');
+  await expect(page.getByRole('status')).toContainText('Guess time is up');
   await expect(page.getByRole('status')).toContainText('CAMP');
   await expect(checked.getByRole('img', { name: 'C: right place', exact: true })).toBeVisible();
   await expect(checked.getByRole('img', { name: 'A: elsewhere in word', exact: true })).toBeVisible();
@@ -91,7 +91,7 @@ test('an unknown word that ends a Quickfire word leaves no unfinished entry and 
   await expect(page.getByRole('status')).toContainText('Unknown submitted word: this word has ended');
   await expect(page.getByRole('status')).toContainText('CAMP');
   await page.clock.fastForward(20000);
-  await expect(page.getByRole('status')).not.toContainText('Word time is up');
+  await expect(page.getByRole('status')).not.toContainText('Guess time is up');
   await expect(page.getByRole('status')).not.toContainText('Last entry was not scored');
   await expect(guessClock(page)).toHaveText('0:06');
   await expect(page.getByRole('group', { name: 'Guess 1', exact: true })).toHaveText('');
@@ -116,7 +116,7 @@ test('giving up pauses the final until a same-length retry, without refilling it
   await expect(bar(page, 'Round')).toHaveJSProperty('value', 85);
   await expect(page.getByRole('status')).toContainText('Round timer paused');
   await page.getByRole('button', { name: 'Another 4-letter word', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/4 letters/)).toBeVisible();
   await expect(roundClock(page)).toHaveText('1:25');
   await expect(bar(page, 'Round')).toHaveJSProperty('value', 85);
   await page.clock.runFor(5000);
@@ -152,7 +152,7 @@ test('solved lengths pause numbers and progress through dialogs and background w
   await expect(roundClock(page)).toHaveText('1:26');
   await expect(bar(page, 'Round')).toHaveJSProperty('value', 85.5);
   await page.getByRole('button', { name: 'Next length' }).click();
-  await expect(page.getByRole('heading', { name: 'Find the five.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/5 letters/)).toBeVisible();
   await expect(bar(page, 'Round')).toHaveJSProperty('value', 85.5);
   await page.clock.runFor(5500);
   await guess(page, 'CHAIR');
@@ -160,7 +160,7 @@ test('solved lengths pause numbers and progress through dialogs and background w
   await expect(roundClock(page)).toHaveText('1:20');
   await expect(bar(page, 'Round')).toHaveJSProperty('value', 80);
   await page.getByRole('button', { name: 'Next length' }).click();
-  await expect(page.getByRole('heading', { name: 'Find the six.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/6 letters/)).toBeVisible();
   await expect(roundClock(page)).toHaveText('1:20');
   await enterWord(page, 'CAS');
   await page.clock.runFor(80000);
@@ -194,7 +194,7 @@ test('Quickfire preset has a ten-second guess clock and fails only the word', as
   await guess(page, 'CARGO');
   await expect(guessClock(page)).toHaveText('0:10');
   await page.clock.runFor(10000);
-  await expect(page.getByRole('status')).toContainText('Word time is up');
+  await expect(page.getByRole('status')).toContainText('Guess time is up');
   await expect(page.getByRole('status')).toContainText('CHAIR');
   await page.getByRole('button', { name: 'Next word', exact: true }).click();
   await expect(guessClock(page)).toHaveText('0:10');
@@ -258,7 +258,7 @@ test('free rejections do not reset the guess clock, a checked guess does, and a 
   await guess(page, 'CHAIR');
   await expect(page.getByRole('status')).toContainText('Nicely found');
   await page.getByRole('button', { name: 'Next word', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/4 letters/)).toBeVisible();
   await expect(guessClock(page)).toHaveCount(0);
   await expect(page.locator('.pending-settings')).toHaveCount(0);
   await expect(page.locator('.clock-strip')).toHaveText('∞ Untimed');
@@ -271,7 +271,7 @@ test('the guess clock keeps running with settings open', async ({ page }) => {
   await openSettings(page);
   await page.clock.fastForward(10000);
   await page.getByRole('button', { name: 'Close dialog' }).click();
-  await expect(page.getByRole('status')).toContainText('Word time is up');
+  await expect(page.getByRole('status')).toContainText('Guess time is up');
   await expect(page.getByRole('group', { name: 'Guess 1: not scored', exact: true })).toHaveText('C✓A');
 });
 
@@ -292,7 +292,7 @@ test('late submission after a suspended clock cannot turn expiry into a win', as
   // Advance Date without running timers: emulate JS suspended in a background tab.
   await page.clock.setSystemTime(new Date('2026-03-01T12:00:12Z'));
   await guess(page, 'CHAIR');
-  await expect(page.getByRole('status')).toContainText('Word time is up');
+  await expect(page.getByRole('status')).toContainText('Guess time is up');
   await expect(page.getByRole('status')).not.toContainText('Nicely found');
   await expect(page.getByRole('group', { name: 'Guess 1: not scored', exact: true })).toHaveText('C✓HAIR');
   await expect(page.getByText('0 of 5 guesses used')).toBeVisible();
@@ -326,7 +326,7 @@ test('a timed preset persists across reload and starts a fresh guess clock', asy
   await page.clock.runFor(4000);
   await expect(guessClock(page)).toHaveText('0:06');
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/4 letters/)).toBeVisible();
   await expect(guessClock(page)).toHaveText('0:10');
   await expect(bar(page, 'Guess')).toHaveJSProperty('value', 10);
   const reopened = await openSettings(page);
@@ -344,7 +344,7 @@ test('changing appearance does not restart a live clock or discard the entry', a
   await expect(guessClock(page)).toHaveText('0:06');
   await expect(page.getByLabel('Your guess', { exact: true })).toHaveText('CH');
   await page.clock.runFor(6000);
-  await expect(page.getByRole('status')).toContainText('Word time is up');
+  await expect(page.getByRole('status')).toContainText('Guess time is up');
 });
 
 test.describe('mobile timed play', () => {
@@ -375,7 +375,7 @@ test.describe('mobile timed play', () => {
       await page.clock.runFor(2500);
       await page.getByRole('button', { name: 'Another 4-letter word', exact: true }).tap();
       await expect(roundClock(page)).toHaveText('1:25');
-      await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
+      await expect(page.locator('.puzzle-meta').getByText(/4 letters/)).toBeVisible();
       await expect(page.getByRole('group', { name: 'Your guess', exact: true })).toHaveText('Tap letters below');
       await expect(page.locator('.play-area input, .play-area textarea, .play-area [contenteditable="true"]')).toHaveCount(0);
       await page.clock.runFor(5000);
@@ -387,7 +387,7 @@ test.describe('mobile timed play', () => {
       await expect(roundClock(page)).toHaveText('1:20');
       await expect(bar(page, 'Round')).toHaveJSProperty('value', 80);
       await page.getByRole('button', { name: 'Next length', exact: true }).tap();
-      await expect(page.getByRole('heading', { name: 'Find the five.' })).toBeVisible();
+      await expect(page.locator('.puzzle-meta').getByText(/5 letters/)).toBeVisible();
       await expect(roundClock(page)).toHaveText('1:20');
     });
     test(`${theme} final keeps unlimited touch guesses in a scrollable board through expiry`, async ({ page }, testInfo) => {
@@ -440,7 +440,7 @@ test.describe('mobile timed play', () => {
       await expect(bar(page, 'Guess')).toHaveJSProperty('value', 7);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.evaluate(async () => { await document.fonts.ready; });
-      expect(await page.getByRole('heading', { name: 'Find the four.' }).evaluate((heading) =>
+      expect(await page.getByRole('heading', { name: 'Find the word.' }).evaluate((heading) =>
         heading.getBoundingClientRect().height <= parseFloat(getComputedStyle(heading).lineHeight) + 1)).toBe(true);
       await page.screenshot({ path: testInfo.outputPath(`clock-${theme}-320.png`), fullPage: true });
       for (const letter of 'COAT') await page.getByRole('button', { name: letter, exact: true }).tap();
@@ -448,7 +448,7 @@ test.describe('mobile timed play', () => {
       await expect(guessClock(page)).toHaveText('0:10');
       for (const letter of 'CAM') await page.getByRole('button', { name: letter, exact: true }).tap();
       await page.clock.fastForward(10000);
-      await expect(page.getByRole('status')).toContainText('Word time is up');
+      await expect(page.getByRole('status')).toContainText('Guess time is up');
       await expect(page.getByRole('group', { name: 'Guess 1', exact: true }).getByRole('img', { name: 'O: not in word', exact: true })).toBeVisible();
       await expect(page.getByRole('group', { name: 'Guess 2: not scored', exact: true })).toHaveText('C✓AM');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

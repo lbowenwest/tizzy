@@ -9,8 +9,8 @@ One compact playing screen; one **Tizzy** identity. No promotional hero, side co
 ```text
 Tizzy                 How to play   Stats     Settings
 ┌───────────────────────────────────────────────────┐
-│ SINGLE WORD / 4 → 5 → 6                   Untimed │
-│ Find the five.                                    │
+│ PRACTICE · 5 LETTERS                      Untimed │
+│ Find the word.                                    │
 │ [4 letters] [5 letters · NOW] [6 letters]           │ sequence only
 │ Guess 1 of 5                 First letter given   │
 │                 [C✓][ ][ ][ ][ ]                  │
@@ -57,7 +57,7 @@ A solve or failure keeps the checked board, reveals the answer, and replaces ent
 - Sequence solve: **Next length** advances 4 → 5 → 6.
 - Sequence failure: **Another N-letter word** retries the same length.
 - Solving six: **Round complete**, with **New round**.
-- Word expiry: **Word time is up**, with the usual next-word or same-length retry action.
+- Guess expiry in Quickfire: **Guess time is up** (per-word clocks use **Word time is up**), with the usual next-word or same-length retry action.
 - Overall expiry: **Round time is up**, with **New round**; it cannot continue at the old length.
 
 Desktop continuation returns focus to the non-editable guess display. Touch continuation never needs a native keyboard; a paired physical keyboard works even when focus returns to the document. Practice has no daily gate; personal history lives in Stats. Daily has a separate course and result flow below.
@@ -113,8 +113,8 @@ Statistics are text first: four headline numbers (played, solved percentage, cur
 ### Clue puzzles
 
 ```text
-SINGLE WORD · CLUE                                Untimed
-Find the five.
+IN ONE · 5 LETTERS                                Untimed
+Solve the clue.
 Try 1 of 1                                One clue given
 Clue           [C↔][R×][A✓][N×][E×]          labelled, not a guess
                  [ ][ ][ ][ ][ ]               the one try: no hint tile

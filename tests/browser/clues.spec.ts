@@ -28,7 +28,8 @@ test('In one starts from the clue with one row, no first letter and one try', as
 
   const clue = page.getByRole('group', { name: 'Given clue: CARGO' });
   await expect(clue.getByRole('img')).toHaveText(['C✓', 'A↔', 'R↔', 'G×', 'O×']);
-  await expect(page.getByText('SINGLE WORD · CLUE')).toBeVisible();
+  await expect(page.getByText('IN ONE · 5 LETTERS')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Solve the clue.' })).toBeVisible();
   await expect(page.getByText('Try 1 of 1')).toBeVisible();
   await expect(page.getByText('One clue given')).toBeVisible();
   await expect(page.getByRole('group', { name: 'Guess board' }).getByRole('group')).toHaveCount(1);
@@ -65,7 +66,7 @@ test('a rejected try ends In one with its reason and the answer', async ({ page 
   await expect(result).toContainText('That one got away');
   await expect(result).toContainText("STAIR doesn't fit. 1st letter must be C.");
   await expect(result).toContainText('The word was CHAIR.');
-  await expect(page.getByText('1 of 1 tries used')).toBeVisible();
+  await expect(page.getByText('1 of 1 try used')).toBeVisible();
   const rejected = page.getByRole('group', { name: 'Try 1: rejected; 1st letter must be C.' });
   await expect(rejected.getByRole('img')).toHaveText(['S✕', 'T✕', 'A✕', 'I✕', 'R✕']);
   await expect(rejected.getByRole('img').first()).toHaveAccessibleName('S: not scored; word does not fit the clue');

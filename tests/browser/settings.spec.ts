@@ -54,12 +54,12 @@ test('preset selection is a preview and Apply now explicitly starts those rules'
   await expect(preview).toContainText('10 seconds per guess');
   await expect(preview).toContainText('Unknown words end the word');
   await dialog.getByRole('button', { name: 'Close dialog' }).click();
-  await expect(page.getByRole('heading', { name: 'Find the five.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/5 letters/)).toBeVisible();
   await expect(page.getByRole('group', { name: 'Your guess', exact: true })).toHaveText('CHA');
   dialog = await settings(page);
   await dialog.getByLabel('Preset', { exact: true }).selectOption('quickfire-four');
   await dialog.getByRole('button', { name: 'Apply now', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/4 letters/)).toBeVisible();
   await expect(page.getByRole('timer', { name: 'Guess time remaining' })).toBeVisible();
   await expect(page.getByRole('group', { name: 'Your guess', exact: true })).toHaveText('Tap letters below');
 });
@@ -71,14 +71,14 @@ test('saving a preset preserves current play, signals the pending rules and pers
   await dialog.getByLabel('Preset', { exact: true }).selectOption('practice-six');
   await dialog.getByRole('button', { name: 'Save for next round' }).click();
   await expect(page.locator('.pending-settings')).toContainText('6 letters');
-  await expect(page.getByRole('heading', { name: 'Find the five.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/5 letters/)).toBeVisible();
   await expect(page.getByText('Guess 2 of 5')).toBeVisible();
   await guess(page, 'CHAIR');
   await page.getByRole('button', { name: 'Next word', exact: true }).click();
   await expect(page.locator('.pending-settings')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Find the six.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/6 letters/)).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Find the six.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/6 letters/)).toBeVisible();
   dialog = await settings(page);
   await expect(dialog.getByLabel('Preset', { exact: true })).toHaveValue('practice-six');
 });
@@ -120,7 +120,7 @@ test('settings offer presets only, including practice at every length', async ({
   await dialog.getByLabel('Preset', { exact: true }).selectOption('practice-four');
   await expect(dialog.getByRole('region', { name: 'Settings preview' })).toHaveText(/4 letters · 5 guesses per word · Untimed/);
   await dialog.getByRole('button', { name: 'Apply now', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/4 letters/)).toBeVisible();
   await expect(page.getByRole('timer')).toHaveCount(0);
 });
 

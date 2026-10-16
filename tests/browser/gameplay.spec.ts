@@ -67,13 +67,13 @@ test('theme is live, rules wait for the next round and saved choices survive rel
   await expect(page.getByRole('button', { name: 'Settings', exact: true })).toBeFocused();
   await expect(entry(page)).toHaveText('CHA');
   await expect(page.getByText('Guess 2 of 5')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Find the five.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/5 letters/)).toBeVisible();
   await guess(page, 'CHAIR');
   await page.getByRole('button', { name: 'Next word', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Find the six.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/6 letters/)).toBeVisible();
   await page.reload();
   await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'club');
-  await expect(page.getByRole('heading', { name: 'Find the six.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/6 letters/)).toBeVisible();
 });
 
 test('a failed word retries the same length, solve advances, six completes the sequence', async ({ page }) => {
@@ -82,11 +82,11 @@ test('a failed word retries the same length, solve advances, six completes the s
   const dialog = await settings(page);
   await dialog.getByLabel('Preset').selectOption('sequence');
   await dialog.getByRole('button', { name: 'Apply now' }).click();
-  await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/4 letters/)).toBeVisible();
   for (let index = 0; index < 5; index++) await guess(page, 'COAT');
   await expect(page.getByRole('status')).toContainText('CAMP');
   await page.getByRole('button', { name: 'Another 4-letter word' }).click();
-  await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/4 letters/)).toBeVisible();
   await guess(page, 'CAMP');
   await page.getByRole('button', { name: 'Next length' }).click();
   await guess(page, 'CHAIR');
@@ -94,7 +94,7 @@ test('a failed word retries the same length, solve advances, six completes the s
   await guess(page, 'CASTLE');
   await expect(page.getByRole('status')).toContainText('Round complete');
   await page.getByRole('button', { name: 'New round', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Find the four.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/4 letters/)).toBeVisible();
 });
 
 test('a sequence preserves its rules throughout replacements and advances', async ({ page }) => {
@@ -110,7 +110,7 @@ test('a sequence preserves its rules throughout replacements and advances', asyn
     await guess(page, word);
     await page.getByRole('button', { name: word === 'CASTLE' ? 'New round' : 'Next length', exact: true }).click();
   }
-  await expect(page.getByText('SINGLE WORD', { exact: true })).toBeVisible();
+  await expect(page.getByText('PRACTICE · 5 LETTERS', { exact: true })).toBeVisible();
 });
 
 test('native modal blocks background focus, closes with Escape and restores the opener', async ({ page }) => {
@@ -209,7 +209,7 @@ test.describe('touch presentation', () => {
         await dialog.getByLabel('Appearance', { exact: true }).selectOption(theme);
         await dialog.getByLabel('Preset', { exact: true }).selectOption('practice-six');
         await dialog.getByRole('button', { name: 'Apply now' }).tap();
-        await expect(page.getByRole('heading', { name: 'Find the six.' })).toBeVisible();
+        await expect(page.locator('.puzzle-meta').getByText(/6 letters/)).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
         expect(await entry(page).evaluate((element) => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
         const key = await page.getByRole('button', { name: 'Q', exact: true }).boundingBox();

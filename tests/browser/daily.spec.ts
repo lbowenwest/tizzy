@@ -168,7 +168,7 @@ test('another tab follows the saved course without restarting its clock or losin
   await expect(page.getByRole('status')).toContainText('FLAT');
   await expect(timer(page)).toHaveText('0:03');
   await other.getByRole('button', { name: 'Next length' }).click();
-  await expect(page.getByRole('heading', { name: 'Find the five.' })).toBeVisible();
+  await expect(page.locator('.puzzle-meta').getByText(/5 letters/)).toBeVisible();
   await other.close();
 });
 

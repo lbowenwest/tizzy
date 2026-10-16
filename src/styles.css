@@ -711,6 +711,20 @@ dialog h2 {
   line-height:1.7;
   color:var(--muted)
 }
+.help-list {
+  padding-left:20px;
+}
+.help-modes dt {
+  margin-top:16px;
+  font-size:14px;
+  font-weight:700;
+}
+.help-modes dd {
+  margin:4px 0 0;
+  font-size:13px;
+  line-height:1.7;
+  color:var(--muted);
+}
 .field {
   margin-top:16px
 }

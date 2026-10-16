@@ -33,14 +33,16 @@ export function Settings({ preferences, onTheme, onSave, onClose }: {
               {themes.map((theme) => <option value={theme} key={theme}>{names[theme]}</option>)}
             </select>
           </div>
-          <p className="settings-footnote">Practice and Climb offer first-letter and no-first-letter variants. In one supplies no first letter: one checked word is given that only the answer fits, and words that don't fit are rejected with the reason. During play, clocks keep running in the background and while dialogs are open. Solves and Give up pause the round timer until you continue. A spent guess resets per-guess time; a free rejection does not. Quickfire presets give 10 seconds per guess.</p>
+          <p className="settings-footnote">{preset === 'in-one'
+            ? 'Use the marked word to find the only answer that fits. A word in the list that breaks the clue uses your only try; an unknown word does not.'
+            : 'Practice and Climb offer both hint variants. Timers keep running during play, including while dialogs are open. See How to play for each mode’s rules.'}</p>
         </div>
         <div className="settings-apply">
           <div className="settings-actions">
             <button className="primary" type="submit" value="restart">Apply now</button>
             <button className="secondary" type="submit" value="save">Save for next round</button>
           </div>
-          <p>Apply now starts this practice preset. Save keeps current play unchanged.</p>
+          <p>Apply now starts this practice preset. Save uses it for your next practice round. Daily Climb progress is kept.</p>
         </div>
       </form>
     </Dialog>

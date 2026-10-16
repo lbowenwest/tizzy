@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { isSequenceComplete, isRoundClockPaused, giveUp, nextWord, startRound, submitGuess, keyboardFeedback, type LetterFeedback, type Round, type Rules } from './game';
 import type { WordData } from './wordLists';
 import { useRoundClock } from './useRoundClock';
-import { describeRules, sameRules } from './presets';
+import { describeRules, presets, sameRules } from './presets';
 import { recordResult } from './history';
 import { AnalysisDialog } from './AnalysisDialog';
 import { formatElapsed } from './daily';
@@ -68,6 +68,7 @@ export function Puzzle({ data, round, setRound, now, pendingRules, onContinue, d
   const active = round.status === 'playing';
   const retainEntry = round.reason === 'word-time' || round.reason === 'round-time' || round.reason === 'given-up';
   const clue = round.clue;
+  const mode = presets.find(({ rules }) => sameRules(rules, round.rules))?.mode ?? (clue ? 'Clue puzzle' : sequence ? 'Climb' : 'Practice');
   // Clue puzzles supply no first letter.
   const first = clue || !round.rules.firstLetter ? null : round.answer[0].toUpperCase();
   const attempt = clue ? 'Try' : 'Guess';
@@ -167,7 +168,8 @@ export function Puzzle({ data, round, setRound, now, pendingRules, onContinue, d
       </div>
     );
   });
-  const resultTitle = round.status === 'expired' ? 'Round time is up.' : round.reason === 'word-time' ? 'Word time is up.'
+  const resultTitle = round.status === 'expired' ? 'Round time is up.'
+    : round.reason === 'word-time' ? round.rules.wordClock.mode === 'guess' ? 'Guess time is up.' : 'Word time is up.'
     : round.reason === 'given-up' ? 'Word given up.'
     : round.status === 'won' ? completed ? 'Round complete.' : 'Nicely found.' : 'That one got away.';
   // A word lost on a rejected try keeps its reason beside the answer.
@@ -181,8 +183,8 @@ export function Puzzle({ data, round, setRound, now, pendingRules, onContinue, d
       </p>}
       <section className="play-area" aria-label="Word puzzle">
         <div className="play-header"><div>
-          <p className="eyebrow">{dailyTiming ? 'DAILY CLIMB · 4 → 5 → 6' : sequence ? '4 → 5 → 6 ROUND' : clue ? 'SINGLE WORD · CLUE' : 'SINGLE WORD'}</p>
-          <h2>Find the {({ 4: 'four', 5: 'five', 6: 'six' })[round.length]}.</h2>
+          <p className="eyebrow">{dailyTiming ? 'DAILY CLIMB · 4 → 5 → 6' : `${mode.toUpperCase()} · ${sequence ? '4 → 5 → 6' : `${round.length} LETTERS`}`}</p>
+          <h2>{clue ? 'Solve the clue.' : 'Find the word.'}</h2>
         </div><div className="clock-strip" aria-label="Clocks">
           {round.wordDeadline !== null && <Clock label={round.rules.wordClock.mode === 'guess' ? 'Guess' : 'Word'}
             deadline={round.wordDeadline} now={active ? now : round.endedAt ?? now} duration={round.rules.wordClock.seconds} />}
@@ -199,7 +201,7 @@ export function Puzzle({ data, round, setRound, now, pendingRules, onContinue, d
         <div className="puzzle-meta">
           <span>{maxGuesses === null
             ? active ? `${attempt} ${round.guesses.length + 1} · Unlimited` : count(round.guesses.length, clue !== null) + ' used'
-            : active ? `${attempt} ${round.guesses.length + 1} of ${maxGuesses}` : `${round.guesses.length} of ${maxGuesses} ${clue ? 'tries' : 'guesses'} used`}</span>
+            : active ? `${attempt} ${round.guesses.length + 1} of ${maxGuesses}` : `${round.guesses.length} of ${count(maxGuesses, clue !== null)} used`}</span>
           <span>{clue ? 'One clue given' : `${round.length} letters · ${first ? 'first letter given' : 'no first letter'}`}</span>
         </div>
         {clue && <div className="board clue-board" role="group" aria-label={`Given clue: ${clue.word.toUpperCase()}`}
@@ -262,8 +264,8 @@ export function Puzzle({ data, round, setRound, now, pendingRules, onContinue, d
           {maxGuesses === null && !dailyTiming && <button type="button" className="secondary give-up" onClick={abandonWord}>Give up</button>}
         </>}
         <p className="play-footer">{dailyTiming ? active ? `This word: ${formatElapsed(dailyTiming.word)} · Clock runs across tabs and reloads.` : 'Take a breath. The next word starts when you continue.' : round.wordDeadline !== null || round.roundDeadline !== null
-          ? paused && !completed ? 'Timers paused until you continue.' : 'Clocks keep running during play, including across tabs.'
-          : `${maxGuesses === null ? `Unlimited ${clue ? 'tries' : 'guesses'}` : count(maxGuesses, clue !== null)}. A fresh word whenever you like.`}</p>
+          ? active ? 'Clocks keep running during play, including across tabs.' : paused && !completed ? 'Timers paused until you continue.' : 'Clock stopped. Continue when you’re ready.'
+          : `${maxGuesses === null ? `Unlimited ${clue ? 'tries' : 'guesses'}` : count(maxGuesses, clue !== null)} per word. ${clue ? 'Use every mark in the clue.' : sequence ? 'Solve each length to complete the climb.' : 'No time limit.'}`}</p>
       </section>
       {analysisRound && <AnalysisDialog round={analysisRound} data={data} onClose={() => setAnalysisRound(null)} />}
     </main>

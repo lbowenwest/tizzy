@@ -86,7 +86,7 @@ export function describeRules(rules: Rules): string {
   if (rules.wordClock.mode !== 'off') parts.push(`${rules.wordClock.seconds} seconds per ${rules.wordClock.mode}`);
   if (rules.roundSeconds !== null && rules.format === 'sequence') parts.push(`${rules.roundSeconds} seconds overall`);
   if (rules.wordClock.mode === 'off' && (rules.format !== 'sequence' || rules.roundSeconds === null)) parts.push('Untimed');
-  parts.push(({ reject: 'Unknown words are free to reject', consume: rules.maxGuesses === null ? 'Unknown words are unscored' : 'Unknown words use a guess', fail: 'Unknown words end the word' })[rules.invalid]);
+  parts.push(({ reject: 'Unknown words do not use a guess', consume: rules.maxGuesses === null ? 'Unknown words are unscored' : 'Unknown words use a guess', fail: 'Unknown words end the word' })[rules.invalid]);
   if (!normalizeRules(rules).clue) parts.push(rules.firstLetter ? 'First letter given' : 'No first letter');
   return parts.join(' · ');
 }

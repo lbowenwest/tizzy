@@ -23,6 +23,14 @@ export const presets: readonly Preset[] = ([
     key: 'sequence', mode: 'Climb', variant: '4 → 5 → 6',
     rules: { ...copyRules(defaultRules), format: 'sequence' },
   },
+  ...([4, 5, 6] as const).map((length) => ({
+    key: `practice-${length}-hidden`, mode: 'Practice', variant: `${length} letters · No first letter`,
+    rules: { ...copyRules(defaultRules), length, firstLetter: false },
+  })),
+  {
+    key: 'sequence-hidden', mode: 'Climb', variant: '4 → 5 → 6 · No first letter',
+    rules: { ...copyRules(defaultRules), format: 'sequence', firstLetter: false },
+  },
   {
     key: 'quickfire-four', mode: 'Quickfire', variant: '4 letters',
     rules: { ...copyRules(defaultRules), length: 4, invalid: 'fail', wordClock: { mode: 'guess', seconds: 10 } },
@@ -48,7 +56,7 @@ export function sameRules(first: Rules, second: Rules): boolean {
   const [a, b] = [normalizeRules(first), normalizeRules(second)];
   return a.format === b.format && a.length === b.length && a.invalid === b.invalid && a.maxGuesses === b.maxGuesses
     && a.wordClock.mode === b.wordClock.mode && a.wordClock.seconds === b.wordClock.seconds
-    && a.roundSeconds === b.roundSeconds && a.clue === b.clue;
+    && a.roundSeconds === b.roundSeconds && a.clue === b.clue && a.firstLetter === b.firstLetter;
 }
 
 export const defaultPreset = 'practice';
@@ -79,5 +87,6 @@ export function describeRules(rules: Rules): string {
   if (rules.roundSeconds !== null && rules.format === 'sequence') parts.push(`${rules.roundSeconds} seconds overall`);
   if (rules.wordClock.mode === 'off' && (rules.format !== 'sequence' || rules.roundSeconds === null)) parts.push('Untimed');
   parts.push(({ reject: 'Unknown words are free to reject', consume: rules.maxGuesses === null ? 'Unknown words are unscored' : 'Unknown words use a guess', fail: 'Unknown words end the word' })[rules.invalid]);
+  if (!normalizeRules(rules).clue) parts.push(rules.firstLetter ? 'First letter given' : 'No first letter');
   return parts.join(' · ');
 }

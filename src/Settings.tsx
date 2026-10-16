@@ -18,7 +18,7 @@ export function Settings({ preferences, onTheme, onSave, onClose }: {
         onSave(preset, button?.value === 'restart');
       }}>
         <div className="settings-fields">
-          <p className="dialog-copy">Choose a preset to preview. Appearance changes immediately.</p>
+          <p className="dialog-copy">Choose a practice preset to preview. Appearance changes immediately.</p>
           <div className="field"><label htmlFor="preset">Preset</label>
             <select id="preset" value={preset} onChange={(event) => setPreset(event.target.value)}>
               {presets.map((entry) => <option value={entry.key} key={entry.key}>{entry.label}</option>)}
@@ -33,14 +33,14 @@ export function Settings({ preferences, onTheme, onSave, onClose }: {
               {themes.map((theme) => <option value={theme} key={theme}>{names[theme]}</option>)}
             </select>
           </div>
-          <p className="settings-footnote">First letter supplied, except in In one: one checked word is given that only the answer fits, and words that don't fit are rejected with the reason. During play, clocks keep running in the background and while dialogs are open. Solves and Give up pause the round timer until you continue. A spent guess resets per-guess time; a free rejection does not. Quickfire presets give 10 seconds per guess.</p>
+          <p className="settings-footnote">Practice and Climb offer first-letter and no-first-letter variants. In one supplies no first letter: one checked word is given that only the answer fits, and words that don't fit are rejected with the reason. During play, clocks keep running in the background and while dialogs are open. Solves and Give up pause the round timer until you continue. A spent guess resets per-guess time; a free rejection does not. Quickfire presets give 10 seconds per guess.</p>
         </div>
         <div className="settings-apply">
           <div className="settings-actions">
             <button className="primary" type="submit" value="restart">Apply now</button>
             <button className="secondary" type="submit" value="save">Save for next round</button>
           </div>
-          <p>Apply now restarts this round. Save keeps it unchanged.</p>
+          <p>Apply now starts this practice preset. Save keeps current play unchanged.</p>
         </div>
       </form>
     </Dialog>

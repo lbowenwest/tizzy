@@ -113,6 +113,7 @@ test('settings offer presets only, including practice at every length', async ({
   await expect(dialog.getByRole('spinbutton')).toHaveCount(0);
   await expect(dialog.getByLabel('Preset', { exact: true }).getByRole('option')).toHaveText([
     'Practice · 4 letters', 'Practice · 5 letters', 'Practice · 6 letters', 'Climb · 4 → 5 → 6',
+    'Practice · 4 letters · No first letter', 'Practice · 5 letters · No first letter', 'Practice · 6 letters · No first letter', 'Climb · 4 → 5 → 6 · No first letter',
     'Quickfire · 4 letters', 'Quickfire · 5 letters', 'Sprint · 90 seconds', 'In one · 5 letters',
   ]);
   await expect(dialog.getByLabel('Preset', { exact: true })).toHaveValue('practice');

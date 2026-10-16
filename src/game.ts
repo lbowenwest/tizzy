@@ -9,10 +9,11 @@ export type Rules = {
   wordClock: { mode: 'off' | 'word' | 'guess'; seconds: number };
   roundSeconds: number | null;
   clue: boolean; // Single words only: start from a clue only the answer fits, with no first letter.
+  firstLetter: boolean;
 };
 export const defaultRules: Rules = {
   format: 'single', length: 5, invalid: 'reject', maxGuesses: 5,
-  wordClock: { mode: 'off', seconds: 10 }, roundSeconds: null, clue: false,
+  wordClock: { mode: 'off', seconds: 10 }, roundSeconds: null, clue: false, firstLetter: true,
 };
 export function copyRules(rules: Rules): Rules {
   return { ...rules, wordClock: { ...rules.wordClock } };
@@ -26,6 +27,7 @@ export function normalizeRules(rules: Rules): Rules {
     wordClock: rules.wordClock.mode === 'off' ? { ...defaultRules.wordClock } : { ...rules.wordClock },
     roundSeconds: sequence ? rules.roundSeconds : null,
     clue: !sequence && rules.clue,
+    firstLetter: !sequence && rules.clue ? false : rules.firstLetter,
   };
 }
 export type LetterFeedback = 'correct' | 'present' | 'absent';
@@ -171,8 +173,16 @@ function newWord(data: WordData, rules: Rules, length: WordLength, now: number,
     if (!candidates.length) throw new Error('No answers available');
     answer = candidates[Math.floor(random() * candidates.length)];
   }
+  return startWord(answer, rules, now, { clue, roundDeadline, roundStartedAt });
+}
+
+/** Start a known word; random practice and scheduled daily puzzles share the same round state. */
+export function startWord(answer: string, rules: Rules, now = Date.now(),
+  { clue = null, roundDeadline = null, roundStartedAt = now }: {
+    clue?: ScoredGuess | null; roundDeadline?: number | null; roundStartedAt?: number;
+  } = {}): Round {
   return {
-    answer, length, rules: copyRules(rules), clue, guesses: [], status: 'playing',
+    answer, length: answer.length as WordLength, rules: copyRules(rules), clue, guesses: [], status: 'playing',
     wordDeadline: rules.wordClock.mode === 'off' ? null : now + rules.wordClock.seconds * 1000,
     roundDeadline, startedAt: now, roundStartedAt, endedAt: null,
   };
@@ -227,7 +237,7 @@ export function nextWord(round: Round, data: WordData, nextRules: Rules, random 
 export function submitGuess(round: Round, input: string, allowed: ReadonlySet<string>, now = Date.now()): { round: Round; message: string } {
   const checked = advanceClock(round, now);
   if (checked !== round || round.status !== 'playing') return { round: checked, message: '' };
-  const evaluation = evaluateCandidate(round.answer, input, allowed, round.clue === null);
+  const evaluation = evaluateCandidate(round.answer, input, allowed, round.clue === null && round.rules.firstLetter);
   let guess: Guess;
   let rejection: string | null = null;
   if (!evaluation.valid) {

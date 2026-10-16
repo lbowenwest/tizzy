@@ -247,6 +247,12 @@ Owner requested information-based guess evaluation, then chose review after fini
 
 Validation: unit examples cover exact information/expected counts, legal probes, duplicate letters, no hindsight, repeated guesses, singleton solves, unscored attempts and clue contradictions. Browser checks cover post-word visibility, wins/losses/expiry, Sprint clock pause, focus restoration and reset, In one, and all three themes at 320px, 390px and desktop widths. Run `npm test`, `npm run build` and `npm run test:e2e`.
 
+## Daily Climb (implemented)
+
+Owner approved a daily 4 → 5 → 6 elapsed-time race with unlimited guesses and both hint variants, plus first-letter/no-first-letter variants for normal Climb and Practice (2026-10-16). `design.md` records the timing and reset rules. Implementation shares the controller, board and analysis; daily owns fixed versioned words, persistence, stage splits, copied results, daily records and retained review. Existing practice keys/history remain intact. No account, shared leaderboard or backend was added.
+
+Verification covers fixed course identity, distinct hint variants, unrestricted guess count, whole-pool no-hint analysis, elapsed splits excluding breaks, reloads and UTC midnight, storage failure/corruption/stale tabs, separate records and spoiler-free copy. Browser tests exercise both dev and built preview, with daily screenshots at 320px, 390px and 1280px in all three themes. Analysis moved to a worker after measuring an 8.2-second synchronous full six-letter no-hint review; the pure ranking model is unchanged.
+
 ## Integrated acceptance and coordination
 
 Once the relevant slices are complete, run Vitest, Playwright at mobile/desktop viewports, and a production Vite build. Confirm attribution is shipped, no browser request reaches a live dictionary, word rules live outside React, all three invalid policies work, same-length retries and both clock scopes distinguish word from round failure, and settings survive reload. After H1–H2, finished words appear once in their preset group and history survives reload without affecting play. After C1–C3, every shipped clue has exactly one possible correct guess (enforced at build, test and play), In one plays end to end without a first letter, and ordinary modes and their tests are unchanged. Tests belong to each slice; this is a cross-slice check, not a separate implementation task.

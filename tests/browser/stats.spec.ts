@@ -73,7 +73,7 @@ test('records finished words and summarises them by mode and variant across relo
     await tab(page, 'Practice variant', '4 letters').click();
     await expect(dialog).toContainText('Not played yet.');
     await tab(page, 'Mode', 'Climb').click();
-    await expect(dialog.getByRole('group', { name: 'Climb variant' })).toHaveCount(0);
+    await expect(dialog.getByRole('group', { name: 'Climb variant' }).getByRole('button')).toHaveCount(2);
     await expect(dialog).toContainText('Not played yet.');
     await page.keyboard.press('Escape');
     await expect(dialog).not.toBeVisible();

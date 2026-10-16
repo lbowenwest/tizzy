@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
-import { analyseFinishedWord, type GuessAnalysis } from './analysis';
+import { useEffect, useRef, useState } from 'react';
+import type { GuessAnalysis, WordAnalysis } from './analysis';
 import { Dialog } from './Dialog';
 import type { Guess, Round } from './game';
 import type { WordData } from './wordLists';
@@ -68,8 +68,18 @@ function GuessReview({ guess, solved }: { guess: GuessAnalysis; solved: boolean 
   </>;
 }
 
-export function AnalysisDialog({ round, data, onClose }: { round: Round; data: WordData; onClose: () => void }) {
-  const analysis = useMemo(() => analyseFinishedWord(round, data), [round, data]);
+export function AnalysisDialog({ round, data, onClose, retained = false }: { round: Round; data: WordData; onClose: () => void; retained?: boolean }) {
+  const [analysis, setAnalysis] = useState<WordAnalysis | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setAnalysis(null);
+    setFailed(false);
+    const worker = new Worker(new URL('./analysis.worker.ts', import.meta.url), { type: 'module' });
+    worker.onmessage = (event: MessageEvent<WordAnalysis | null>) => setAnalysis(event.data);
+    worker.onerror = () => setFailed(true);
+    worker.postMessage({ round, words: data });
+    return () => worker.terminate();
+  }, [round, data]);
   const [selected, setSelected] = useState(0);
   const reviewRef = useRef<HTMLElement>(null);
   const guesses = analysis?.kind === 'information' ? analysis.guesses : [];
@@ -80,6 +90,7 @@ export function AnalysisDialog({ round, data, onClose }: { round: Round; data: W
   };
   return <Dialog title="Your guesses." titleId="analysis-title" onClose={onClose}>
     <div className="analysis">
+      {!analysis && <p role="status">{failed ? 'Analysis could not be loaded. Close and reopen to try again.' : 'Comparing your guesses with the word list…'}</p>}
       <p className="review-result"><strong>{round.answer.toUpperCase()}</strong><span>{round.status === 'won' ? 'Solved' : 'Not solved'} · {round.guesses.length} {round.guesses.length === 1 ? 'attempt' : 'attempts'}</span></p>
       {analysis?.kind === 'clue' ? <section className="review-clue">
         <p className="eyebrow">THE GIVEN CLUE</p>
@@ -112,7 +123,7 @@ export function AnalysisDialog({ round, data, onClose }: { round: Round; data: W
           <summary>About the analysis</summary>
           <p><strong>Info /100</strong> compares expected information with the most informative legal guess: 100 means a top information choice. It is not an overall skill or luck rating. A dash means the attempt was unscored or only one answer remained.</p>
           <p><strong>Bits</strong> measure expected information gain across all possible feedback patterns. One bit halves uncertainty on average. Average words left and solve chance describe the choice before its feedback was known; words left describes the actual result. A solved answer still counts as one.</p>
-          <p>All remaining words in Tizzy’s curated answer list are weighted equally. Comparisons use every accepted guess with the supplied first letter. Earlier words and the no-repeat selection rule are not used in this model.</p>
+          <p>All remaining words in Tizzy’s curated answer list are weighted equally. Comparisons use every accepted guess{round.rules.firstLetter ? ' with the supplied first letter' : ' of this length'}. Earlier words, the daily schedule and the no-repeat selection rule are not used in this model.</p>
         </details>
         {current && <nav className="review-pagination" aria-label="Review navigation">
           <button type="button" className="secondary" disabled={selected === 0} onClick={() => chooseGuess(selected - 1)}>← Previous</button>
@@ -120,7 +131,7 @@ export function AnalysisDialog({ round, data, onClose }: { round: Round; data: W
           <button type="button" className="secondary" disabled={selected === guesses.length - 1} onClick={() => chooseGuess(selected + 1)}>Next guess →</button>
         </nav>}
       </>}
-      <p className="analysis-footnote">Available until you continue to the next word.</p>
+      <p className="analysis-footnote">{retained ? 'Saved with your daily result in this browser.' : 'Available until you continue to the next word.'}</p>
     </div>
   </Dialog>;
 }

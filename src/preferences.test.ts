@@ -48,7 +48,7 @@ describe('presets', () => {
     expect(describeRules(inOne.rules)).toBe('5 letters · Starts with a clue only the answer fits; no first letter · 1 guess per word · Untimed · Unknown words are free to reject');
   });
   it('offers untimed practice at every length, then the sequence and timed presets', () => {
-    expect(presets.map(({ key }) => key)).toEqual(['practice-four', 'practice', 'practice-six', 'sequence', 'quickfire-four', 'quickfire-five', 'sprint', 'in-one']);
+    expect(presets.map(({ key }) => key)).toEqual(['practice-four', 'practice', 'practice-six', 'sequence', 'practice-4-hidden', 'practice-5-hidden', 'practice-6-hidden', 'sequence-hidden', 'quickfire-four', 'quickfire-five', 'sprint', 'in-one']);
     for (const length of [4, 5, 6] as const) {
       expect(presets.find(({ rules }) => rules.format === 'single' && !rules.clue && rules.wordClock.mode === 'off' && rules.length === length)!.rules)
         .toEqual({ ...defaultRules, length });

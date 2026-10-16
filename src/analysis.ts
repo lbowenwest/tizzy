@@ -45,9 +45,9 @@ export function analyseFinishedWord(round: Round, data: WordData): WordAnalysis 
       })),
     };
   }
-  const first = round.answer[0]; // Publicly supplied hint, not hidden answer knowledge.
-  const legal = data.guesses[round.length].filter((word) => word[0] === first);
-  let candidates = data.answers[round.length].filter((word) => word[0] === first);
+  const first = round.rules.firstLetter ? round.answer[0] : null;
+  const legal = data.guesses[round.length].filter((word) => first === null || word[0] === first);
+  let candidates = data.answers[round.length].filter((word) => first === null || word[0] === first);
   const guesses = round.guesses.map(({ word, feedback }, index): GuessAnalysis => {
     const before = candidates.length;
     const lastTry = round.rules.maxGuesses !== null && index + 1 === round.rules.maxGuesses;

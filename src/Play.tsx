@@ -5,6 +5,7 @@ import { useRoundClock } from './useRoundClock';
 import { describeRules, sameRules } from './presets';
 import { recordResult } from './history';
 import { AnalysisDialog } from './AnalysisDialog';
+import { formatElapsed } from './daily';
 
 const marks: Record<LetterFeedback, string> = { correct: '✓', present: '↔', absent: '×' };
 const descriptions: Record<LetterFeedback, string> = { correct: 'right place', present: 'elsewhere in word', absent: 'not in word' };
@@ -44,6 +45,16 @@ function count(value: number, tries: boolean) {
 export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rules }) {
   const [round, setRound] = useState(() => startRound(data, pendingRules));
   const now = useRoundClock(round, setRound);
+  useEffect(() => { recordResult(round); }, [round]);
+  return <Puzzle data={data} round={round} setRound={setRound} now={now} pendingRules={pendingRules}
+    onContinue={() => setRound(nextWord(round, data, pendingRules))} />;
+}
+
+/** Shared board and input; the caller owns random or scheduled progression and persistence. */
+export function Puzzle({ data, round, setRound, now, pendingRules, onContinue, dailyTiming }: {
+  data: WordData; round: Round; setRound: (round: Round) => void; now: number; pendingRules?: Rules;
+  onContinue: () => void; dailyTiming?: { word: number; total: number };
+}) {
   const [entry, setEntry] = useState('');
   const [message, setMessage] = useState('');
   const [analysisRound, setAnalysisRound] = useState<Round | null>(null);
@@ -58,12 +69,10 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
   const retainEntry = round.reason === 'word-time' || round.reason === 'round-time' || round.reason === 'given-up';
   const clue = round.clue;
   // Clue puzzles supply no first letter.
-  const first = clue ? null : round.answer[0].toUpperCase();
+  const first = clue || !round.rules.firstLetter ? null : round.answer[0].toUpperCase();
   const attempt = clue ? 'Try' : 'Guess';
   const maxGuesses = round.rules.maxGuesses;
   const knowledge = keyboardFeedback(clue ? [clue, ...round.guesses] : round.guesses);
-  // Record each finished word; repeat observations and a later round expiry replace, never duplicate.
-  useEffect(() => { recordResult(round); }, [round]);
   useEffect(() => {
     if (maxGuesses === null && boardRef.current) boardRef.current.scrollTop = boardRef.current.scrollHeight;
   }, [maxGuesses, round.guesses.length, round.answer, round.status]);
@@ -92,7 +101,7 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
   }
   function continuePlay() {
     setAnalysisRound(null);
-    setRound(nextWord(round, data, pendingRules));
+    onContinue();
     setEntry('');
     setMessage('');
     // Never summon the native keyboard for a touch-only next-word action.
@@ -140,7 +149,7 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
     };
   }, [active, entry, round, allowed]);
 
-  const rowCount = maxGuesses ?? Math.max(5, round.guesses.length + (active || (retainEntry && entry.length > 0) ? 1 : 0));
+  const rowCount = maxGuesses ?? Math.max(dailyTiming ? 1 : 5, round.guesses.length + (active || (retainEntry && entry.length > 0) ? 1 : 0));
   const rows = Array.from({ length: rowCount }, (_, index) => {
     const guess = round.guesses[index];
     const editing = active && index === round.guesses.length;
@@ -167,19 +176,20 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
 
   return (
     <main className="composition">
-      {!sameRules(round.rules, pendingRules) && <p className="pending-settings" aria-live="polite">
+      {pendingRules && !sameRules(round.rules, pendingRules) && <p className="pending-settings" aria-live="polite">
         <strong>Saved for next round.</strong> {describeRules(pendingRules)}. This round is unchanged.
       </p>}
       <section className="play-area" aria-label="Word puzzle">
         <div className="play-header"><div>
-          <p className="eyebrow">{sequence ? '4 → 5 → 6 ROUND' : clue ? 'SINGLE WORD · CLUE' : 'SINGLE WORD'}</p>
+          <p className="eyebrow">{dailyTiming ? 'DAILY CLIMB · 4 → 5 → 6' : sequence ? '4 → 5 → 6 ROUND' : clue ? 'SINGLE WORD · CLUE' : 'SINGLE WORD'}</p>
           <h2>Find the {({ 4: 'four', 5: 'five', 6: 'six' })[round.length]}.</h2>
         </div><div className="clock-strip" aria-label="Clocks">
           {round.wordDeadline !== null && <Clock label={round.rules.wordClock.mode === 'guess' ? 'Guess' : 'Word'}
             deadline={round.wordDeadline} now={active ? now : round.endedAt ?? now} duration={round.rules.wordClock.seconds} />}
           {round.roundDeadline !== null && <Clock label="Round" deadline={round.roundDeadline}
             now={paused || round.status === 'expired' ? round.endedAt ?? now : now} duration={round.rules.roundSeconds!} />}
-          {round.wordDeadline === null && round.roundDeadline === null && <span className="clock-pill"><span aria-hidden="true">∞ </span>Untimed</span>}
+          {dailyTiming && <span className="clock-pill daily-clock"><span className="clock-name">Total</span><span role="timer" aria-label="Total elapsed time" aria-live="off">{formatElapsed(dailyTiming.total)}</span></span>}
+          {!dailyTiming && round.wordDeadline === null && round.roundDeadline === null && <span className="clock-pill"><span aria-hidden="true">∞ </span>Untimed</span>}
         </div></div>
         {sequence && <ol className="sequence" aria-label="Sequence progress">
           {([4, 5, 6] as const).map((length) => <li key={length} aria-current={length === round.length ? 'step' : undefined}>
@@ -190,7 +200,7 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
           <span>{maxGuesses === null
             ? active ? `${attempt} ${round.guesses.length + 1} · Unlimited` : count(round.guesses.length, clue !== null) + ' used'
             : active ? `${attempt} ${round.guesses.length + 1} of ${maxGuesses}` : `${round.guesses.length} of ${maxGuesses} ${clue ? 'tries' : 'guesses'} used`}</span>
-          <span>{clue ? 'One clue given' : `${round.length} letters · first letter given`}</span>
+          <span>{clue ? 'One clue given' : `${round.length} letters · ${first ? 'first letter given' : 'no first letter'}`}</span>
         </div>
         {clue && <div className="board clue-board" role="group" aria-label={`Given clue: ${clue.word.toUpperCase()}`}
           style={{ '--length': round.length } as CSSProperties}>
@@ -205,6 +215,7 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
           <div><h3>{resultTitle}</h3><p>The word was <strong>{round.answer.toUpperCase()}</strong>.</p>
             {finalRejection && <p>{round.guesses.at(-1)!.word.toUpperCase()} doesn't fit. {finalRejection}</p>}
             {retainEntry && entry && <p>Last entry was not scored.</p>}
+            {dailyTiming && <p>Word split: <strong>{formatElapsed(dailyTiming.word)}</strong>. Clock paused until the next word.</p>}
             {paused && !completed && round.roundDeadline !== null && <p>Round timer paused until you continue.</p>}
             {round.reason === 'invalid' && <p>Unknown submitted word: this word has ended.</p>}
             {round.status === 'expired' && <p>The whole round has ended. Start a new round to try again.</p>}
@@ -212,17 +223,17 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
           </div>
           <div className="result-actions">
             <button ref={nextRef} className="primary" onClick={continuePlay}>{nextLabel} <span aria-hidden="true">→</span></button>
-            <button className="secondary" onClick={() => setAnalysisRound(round)}>Analyse guesses</button>
+            {!dailyTiming && <button className="secondary" onClick={() => setAnalysisRound(round)}>Analyse guesses</button>}
           </div>
         </div>}
-        {active && <p id="feedback" className="feedback" role="status">{message || (first ? `Your next guess starts with ${first}.` : 'Only one word fits the clue.')}</p>}
+        {active && <p id="feedback" className="feedback" role="status">{message || (first ? `Your next guess starts with ${first}.` : clue ? 'Only one word fits the clue.' : 'Any first letter. Follow the clues as you go.')}</p>}
         <div className="legend" aria-label="Letter feedback legend">
           <span><i className="correct" aria-hidden="true">✓</i> Right place</span>
           <span><i className="present" aria-hidden="true">↔</i> Elsewhere</span>
           <span><i className="absent" aria-hidden="true">×</i> Not in word</span>
         </div>
         {active && <>
-          <div className="input-label">Your guess <span>{first ? `Starts with ${first}` : 'Must fit the clue'}</span></div>
+          <div className="input-label">Your guess <span>{first ? `Starts with ${first}` : clue ? 'Must fit the clue' : 'Any first letter'}</span></div>
           <div ref={entryRef} id="guess-entry" className="guess-display" role="group" tabIndex={0}
             aria-label="Your guess" aria-describedby="current-guess entry-instructions feedback">
             <span id="current-guess" className="guess-value">{entry}</span>
@@ -248,9 +259,9 @@ export function Play({ data, pendingRules }: { data: WordData; pendingRules: Rul
               {row === 2 && <button className="key key-command backspace" aria-label="Delete last letter" type="button" onClick={() => key('Backspace')}>⌫</button>}
             </div>)}
           </div>
-          {maxGuesses === null && <button type="button" className="secondary give-up" onClick={abandonWord}>Give up</button>}
+          {maxGuesses === null && !dailyTiming && <button type="button" className="secondary give-up" onClick={abandonWord}>Give up</button>}
         </>}
-        <p className="play-footer">{round.wordDeadline !== null || round.roundDeadline !== null
+        <p className="play-footer">{dailyTiming ? active ? `This word: ${formatElapsed(dailyTiming.word)} · Clock runs across tabs and reloads.` : 'Take a breath. The next word starts when you continue.' : round.wordDeadline !== null || round.roundDeadline !== null
           ? paused && !completed ? 'Timers paused until you continue.' : 'Clocks keep running during play, including across tabs.'
           : `${maxGuesses === null ? `Unlimited ${clue ? 'tries' : 'guesses'}` : count(maxGuesses, clue !== null)}. A fresh word whenever you like.`}</p>
       </section>

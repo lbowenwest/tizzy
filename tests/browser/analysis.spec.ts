@@ -37,6 +37,7 @@ test('analysis is post-word only, explains choices, restores focus and resets on
   await expect(first).toContainText('4 → 3');
   await expect(dialog.getByLabel('Information score: 54', { exact: true })).toBeVisible();
   await expect(first).toContainText('2.5 on average');
+  await expect(first).toContainText('BARK would reveal more information on average, though it is not in Tizzy’s answer list.');
   await expect(first.getByRole('region', { name: 'Remaining answers' }).getByRole('listitem')).toHaveText(['BALE', 'BANE', 'BARE']);
   await first.locator('summary').filter({ hasText: 'Compare the choices' }).click();
   const table = first.getByRole('table');
@@ -59,6 +60,25 @@ test('analysis is post-word only, explains choices, restores focus and resets on
   await page.getByRole('button', { name: 'Next word', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Analyse guesses' })).toHaveCount(0);
   await expect(page.getByText('Guess 1 of 5')).toBeVisible();
+});
+
+test('analysis distinguishes accepted guesses outside the answer list from answers ruled out by clues', async ({ page }) => {
+  await fixture(page);
+  await page.route('**/words/answers/4.txt', (route) => route.fulfill({ body: 'grab\ngray\n' }));
+  await page.route('**/words/4.txt', (route) => route.fulfill({ body: 'grab\ngran\ngray\n' }));
+  await page.reload();
+  await guess(page, 'GRAY');
+  await guess(page, 'GRAN');
+  await guess(page, 'GRAY');
+  await guess(page, 'GRAB');
+  const dialog = await openAnalysis(page);
+  await dialog.getByRole('button', { name: 'Review guess 2: GRAN' }).click();
+  const outsideList = dialog.getByRole('region', { name: 'Guess 2 review' });
+  await expect(outsideList).toContainText('GRAN is an accepted guess, but it is not in Tizzy’s answer list.');
+  await expect(outsideList).toContainText('GRAB was the only word left in that list.');
+  await expect(outsideList).not.toContainText('could not be the answer');
+  await dialog.getByRole('button', { name: 'Review guess 3: GRAY' }).click();
+  await expect(dialog.getByRole('region', { name: 'Guess 3 review' })).toContainText('The earlier clues had already ruled out GRAY.');
 });
 
 test('a loss can be reviewed and repeated guesses add no information', async ({ page }) => {

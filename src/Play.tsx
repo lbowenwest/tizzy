@@ -74,9 +74,34 @@ export function Puzzle({ data, round, setRound, now, pendingRules, onContinue, d
   const attempt = clue ? 'Try' : 'Guess';
   const maxGuesses = round.rules.maxGuesses;
   const knowledge = keyboardFeedback(clue ? [clue, ...round.guesses] : round.guesses);
+  const unfinishedEntry = retainEntry && entry.length > 0;
   useEffect(() => {
-    if (maxGuesses === null && boardRef.current) boardRef.current.scrollTop = boardRef.current.scrollHeight;
-  }, [maxGuesses, round.guesses.length, round.answer, round.status]);
+    const board = boardRef.current;
+    if (maxGuesses !== null || !board) return;
+    // Reveal the current row, not the unused rows beneath it. A phone resize can
+    // also change the board viewport while a guess is being entered.
+    const index = Math.max(0, round.guesses.length - (!active && !unfinishedEntry ? 1 : 0));
+    const revealRow = () => {
+      const row = board.children[Math.min(index, board.children.length - 1)];
+      if (!row) return;
+      const bounds = board.getBoundingClientRect();
+      const target = row.getBoundingClientRect();
+      if (target.bottom + 2 > bounds.bottom) board.scrollTop += Math.ceil(target.bottom + 2 - bounds.bottom);
+      else if (target.top < bounds.top) board.scrollTop -= Math.ceil(bounds.top - target.top);
+    };
+    revealRow();
+    let width = board.clientWidth;
+    let height = board.clientHeight;
+    const observer = new ResizeObserver(() => {
+      // The initial notification must not undo a player's manual history scroll.
+      if (width === board.clientWidth && height === board.clientHeight) return;
+      width = board.clientWidth;
+      height = board.clientHeight;
+      revealRow();
+    });
+    observer.observe(board);
+    return () => observer.disconnect();
+  }, [maxGuesses, round.guesses.length, round.answer, active, unfinishedEntry]);
 
   function focusForPhysicalTyping() {
     if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) entryRef.current?.focus({ preventScroll: true });
@@ -181,7 +206,7 @@ export function Puzzle({ data, round, setRound, now, pendingRules, onContinue, d
       {pendingRules && !sameRules(round.rules, pendingRules) && <p className="pending-settings" aria-live="polite">
         <strong>Saved for next round.</strong> {describeRules(pendingRules)}. This round is unchanged.
       </p>}
-      <section className="play-area" aria-label="Word puzzle">
+      <section className="play-area" data-playing={active || undefined} aria-label="Word puzzle">
         <div className="play-header"><div>
           <p className="eyebrow">{dailyTiming ? 'DAILY CLIMB · 4 → 5 → 6' : `${mode.toUpperCase()} · ${sequence ? '4 → 5 → 6' : `${round.length} LETTERS`}`}</p>
           <h2>{clue ? 'Solve the clue.' : 'Find the word.'}</h2>
@@ -204,14 +229,15 @@ export function Puzzle({ data, round, setRound, now, pendingRules, onContinue, d
             : active ? `${attempt} ${round.guesses.length + 1} of ${maxGuesses}` : `${round.guesses.length} of ${count(maxGuesses, clue !== null)} used`}</span>
           <span>{clue ? 'One clue given' : `${round.length} letters · ${first ? 'first letter given' : 'no first letter'}`}</span>
         </div>
-        {clue && <div className="board clue-board" role="group" aria-label={`Given clue: ${clue.word.toUpperCase()}`}
-          style={{ '--length': round.length } as CSSProperties}>
-          <p className="clue-label" aria-hidden="true">Clue</p>
-          <div className="board-row">{[...clue.word].map((letter, column) => <Tile key={column} letter={letter} feedback={clue.feedback[column]} />)}</div>
-        </div>}
-        <div ref={boardRef} className="board" data-unlimited={maxGuesses === null || undefined}
-          tabIndex={maxGuesses === null ? 0 : undefined}
-          style={{ '--length': round.length } as CSSProperties} role="group" aria-label="Guess board">{rows}</div>
+        <div className="board-space" style={{ '--length': round.length, '--rows': (maxGuesses ?? 5) + (clue ? 1 : 0), '--clue-space': clue ? '30px' : '0px' } as CSSProperties}>
+          {clue && <div className="board clue-board" role="group" aria-label={`Given clue: ${clue.word.toUpperCase()}`}>
+            <p className="clue-label" aria-hidden="true">Clue</p>
+            <div className="board-row">{[...clue.word].map((letter, column) => <Tile key={column} letter={letter} feedback={clue.feedback[column]} />)}</div>
+          </div>}
+          <div ref={boardRef} className="board" data-unlimited={maxGuesses === null || undefined}
+            tabIndex={maxGuesses === null ? 0 : undefined}
+            role="group" aria-label="Guess board">{rows}</div>
+        </div>
         {maxGuesses === null && round.guesses.length >= 5 && <p className="board-history">Scroll the board to see earlier guesses.</p>}
         {!active && <div className="result" role="status">
           <div><h3>{resultTitle}</h3><p>The word was <strong>{round.answer.toUpperCase()}</strong>.</p>

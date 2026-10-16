@@ -232,3 +232,48 @@ test.describe('touch presentation', () => {
     }
   }
 });
+
+for (const [width, height] of [[320, 568], [390, 667], [430, 932]]) {
+  for (const preset of ['practice-six', 'sequence']) {
+    test(`${preset} uses the phone canvas at ${width}x${height}`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.addInitScript((preset) => localStorage.setItem('word-practice-preferences-v1', JSON.stringify({ theme: 'letterpress', preset })), preset);
+      await wordFixtures(page);
+      await page.goto('/');
+      const keyboard = page.getByRole('group', { name: 'On-screen keyboard' });
+      await expect(keyboard).toBeInViewport({ ratio: 1 });
+      const bounds = await keyboard.boundingBox();
+      expect(bounds!.width).toBeGreaterThanOrEqual(width - 16);
+      expect(bounds!.y + bounds!.height).toBeGreaterThanOrEqual(height - 12);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+      expect(await page.evaluate(() => scrollY)).toBe(0);
+      for (const tile of await page.getByRole('group', { name: 'Guess board', exact: true }).getByRole('img').all()) {
+        await expect(tile).toBeInViewport({ ratio: 1 });
+        const size = await tile.boundingBox();
+        expect(size!.width).toBeGreaterThanOrEqual(31);
+        expect(Math.abs(size!.width - size!.height)).toBeLessThan(1);
+      }
+      await page.getByRole('button', { name: 'C', exact: true }).click();
+      await expect(page.getByRole('group', { name: 'Guess 1', exact: true })).toHaveText('C✓');
+    });
+  }
+}
+
+test('a short Sprint shows the current row instead of scrolling to unused rows', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.addInitScript(() => localStorage.setItem('word-practice-preferences-v1', JSON.stringify({ theme: 'letterpress', preset: 'sprint' })));
+  await page.clock.install();
+  await wordFixtures(page);
+  await page.goto('/');
+  const board = page.getByRole('group', { name: 'Guess board', exact: true });
+  await expect(board.getByRole('group', { name: 'Guess 1', exact: true })).toBeInViewport({ ratio: 1 });
+  for (let attempt = 0; attempt < 6; attempt++) await guess(page, 'COAT');
+  const current = board.getByRole('group', { name: 'Guess 7', exact: true });
+  await expect(current).toBeInViewport({ ratio: 1 });
+  await enterWord(page, 'CAM');
+  await page.setViewportSize({ width: 390, height: 667 });
+  await expect(current).toBeInViewport({ ratio: 1 });
+  await expect(current).toHaveText('C✓AM');
+  await expect(page.getByRole('group', { name: 'On-screen keyboard' })).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole('button', { name: 'Give up', exact: true })).toBeInViewport({ ratio: 1 });
+});

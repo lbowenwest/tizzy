@@ -19,26 +19,28 @@ function FeedbackWord({ guess }: { guess: Guess }) {
   </span>;
 }
 
-function GuessReview({ guess, solved }: { guess: GuessAnalysis; solved: boolean }) {
+function GuessReview({ guess, solved, answers }: { guess: GuessAnalysis; solved: boolean; answers: readonly string[] }) {
   const { word, value, before, after, alternatives } = guess;
+  const inAnswerList = answers.includes(word);
   const best = alternatives[0];
   const title = value === null ? 'No new clues this time.' : before === 1
-    ? solved ? 'You had it pinned down.' : 'Only one answer was possible.'
+    ? solved ? 'You had it pinned down.' : 'Only one word remained in the answer list.'
     : solved ? 'You found it.' : value.bits < 1e-9 ? 'This added no new information.'
     : !best ? 'A top information choice.' : after === 1 ? 'You narrowed it down to one.' : 'You narrowed the field.';
   return <>
     <div className="review-commentary">
       <h4>{title}</h4>
+      {value && !inAnswerList && <p>{word.toUpperCase()} is an accepted guess, but it is not in Tizzy’s answer list.</p>}
       {value === null ? <p>This attempt was not scored. It supplied no letter information, so all {before} possibilities remained.</p>
         : before === 1 ? <p>{value.solveChance === 1 ? 'You played the only remaining answer: a certain solve. No further information was needed.'
-          : `${word.toUpperCase()} could not be the answer. The earlier clues had already identified ${guess.remaining[0]?.toUpperCase()}.`}</p>
+          : `${inAnswerList ? `The earlier clues had already ruled out ${word.toUpperCase()}. ` : ''}${guess.remaining[0]?.toUpperCase()} was the only word left in that list.`}</p>
         : <>
           <p>You had <strong>{before} possible answers</strong>. {word.toUpperCase()} would leave <strong>{decimal(value.expectedRemaining)} on average</strong>.
             {Math.abs(after - value.expectedRemaining) < 1e-9 ? ` This time, ${after} remained, exactly as expected.`
               : after < value.expectedRemaining ? ` This time, just ${after} remained — a fortunate result.`
               : ` This time, ${after} remained, more than expected.`}</p>
           {best && <p><strong>{best.word.toUpperCase()}</strong> would reveal more information on average{best.solveChance === 0
-            ? ', though it could not itself be the answer.' : '.'}</p>}
+            ? answers.includes(best.word) ? ', though earlier clues had already ruled it out.' : ', though it is not in Tizzy’s answer list.' : '.'}</p>}
         </>}
       {guess.lastTry && value && before > 1 && <p className="review-caution">This was your last try. An answer still in contention had a {chance(1 / before)} chance of solving; gathering information alone could not win.</p>}
     </div>
@@ -116,7 +118,7 @@ export function AnalysisDialog({ round, data, onClose, retained = false }: { rou
           </ol>
           <section ref={reviewRef} className="review-turn" aria-label={`Guess ${selected + 1} review`}>
             <p className="eyebrow" aria-live="polite">GUESS {selected + 1} OF {guesses.length} · {current.word.toUpperCase()} · {current.before} → {current.after} POSSIBLE</p>
-            <GuessReview key={selected} guess={current} solved={round.guesses[selected].feedback?.every((mark) => mark === 'correct') ?? false} />
+            <GuessReview key={selected} guess={current} answers={data.answers[round.length]} solved={round.guesses[selected].feedback?.every((mark) => mark === 'correct') ?? false} />
           </section>
         </>}
         <details className="analysis-method">

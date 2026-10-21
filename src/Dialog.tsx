@@ -9,7 +9,10 @@ export function Dialog({ title, titleId, onClose, children }: {
     if (!dialog.open) dialog.showModal();
   }, []);
   return (
-    <dialog ref={ref} aria-labelledby={titleId} onClose={onClose}>
+    <dialog ref={ref} aria-labelledby={titleId} onClose={(event) => {
+      // React also delivers close events from nested dialogs to this handler.
+      if (event.target === event.currentTarget) onClose();
+    }}>
       <div className="dialog-heading">
         <p className="eyebrow">TIZZY</p>
         <button type="button" className="close" aria-label="Close dialog" onClick={() => ref.current?.close()}>×</button>

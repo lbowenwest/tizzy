@@ -146,6 +146,29 @@ describe('history summary', () => {
 });
 
 describe('history storage parsing', () => {
+  it('drops solved records with impossible guess counts before summarizing', () => {
+    const valid = make(1, { guesses: 5 });
+    const invalid = [
+      ...[0, 6, 7].map((guesses, index) => make(index + 2, { guesses })),
+      make(5, { group: 'in-one', guesses: 0 }),
+      make(6, { group: 'in-one', guesses: 2 }),
+      make(7, { group: 'sprint', guesses: 0 }),
+    ];
+    const restored = parseHistory(JSON.stringify({ version: 1, records: [valid, ...invalid] }));
+    expect(restored).toEqual([valid]);
+    expect(summarizeHistory(restored).get('practice')).toMatchObject({ played: 1, solved: 1 });
+  });
+  it('retains zero-guess failures and solves at finite or unlimited guess counts', () => {
+    const records = [
+      make(1, { group: 'quickfire-five', result: 'failed', reason: 'word-time', guesses: 0 }),
+      make(2, { group: 'in-one', guesses: 1 }),
+      make(3, { guesses: 5 }),
+      make(4, { group: 'sprint', format: 'sequence', guesses: 12 }),
+    ];
+    const restored = parseHistory(JSON.stringify({ version: 1, records }));
+    expect(restored).toEqual(records);
+    expect(summarizeHistory(restored).get('sprint')).toMatchObject({ played: 1, solved: 1 });
+  });
   it('restores valid records in finish order without arbitrary fields', () => {
     const records = [make(2), make(1)];
     expect(parseHistory(JSON.stringify({ version: 1, records: [...records, { ...make(3), extra: true }] })))

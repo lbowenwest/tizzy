@@ -79,6 +79,32 @@ test('daily climb allows unlimited guesses, resumes after reload and sums only w
   await expect(stats.getByRole('heading', { name: 'Climb complete.' })).toBeVisible();
 });
 
+for (const dismiss of ['Close button', 'Escape']) {
+  test(`archived analysis returns to the daily result after ${dismiss}`, async ({ page }) => {
+    await fixture(page);
+    await start(page);
+    await finish(page);
+    await page.getByRole('button', { name: 'Stats', exact: true }).click();
+    const stats = page.getByRole('dialog', { name: 'Daily record.' });
+    await stats.getByRole('button', { name: '2026-10-16' }).click();
+    const trigger = stats.getByRole('button', { name: 'Analyse 4-letter word' });
+    await trigger.click();
+    const analysis = page.getByRole('dialog', { name: 'Your guesses.' });
+    await expect(analysis.getByRole('list', { name: 'Guess analysis' })).toBeVisible();
+    if (dismiss === 'Escape') await page.keyboard.press('Escape');
+    else await analysis.getByRole('button', { name: 'Close dialog' }).click();
+    await expect(analysis).toHaveCount(0);
+    await expect(stats.getByRole('heading', { name: 'Climb complete.' })).toBeVisible();
+    await expect(trigger).toBeFocused();
+    await stats.getByRole('button', { name: 'Analyse 5-letter word' }).click();
+    await expect(analysis).toContainText('JEANS');
+    await page.keyboard.press('Escape');
+    await stats.getByRole('button', { name: 'Close dialog' }).click();
+    await expect(stats).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Stats', exact: true })).toBeFocused();
+  });
+}
+
 test('hint variants use different courses, keep their own progress and remember the choice on reload', async ({ page }) => {
   await fixture(page);
   await start(page);

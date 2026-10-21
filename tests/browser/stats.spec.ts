@@ -159,6 +159,29 @@ test('clearing stats needs confirmation', async ({ page }) => {
   await expect(dialog).toContainText('No finished words yet.');
 });
 
+test('impossible saved guess counts are discarded without losing valid stats or blocking play', async ({ page }) => {
+  await fixture(page);
+  await guess(page, 'CHAIR');
+  await page.evaluate(() => {
+    const key = 'word-practice-history-v1';
+    const saved = JSON.parse(localStorage.getItem(key)!);
+    const valid = saved.records[0];
+    saved.records.push(...[0, 6, 7].map((guesses) => ({ ...valid, id: `invalid-${guesses}`, guesses })));
+    localStorage.setItem(key, JSON.stringify(saved));
+  });
+  const dialog = await openStats(page);
+  await expect(stat(page, 'Played')).toHaveText('1');
+  await expect(distribution(page).first()).toHaveAccessibleName('1 guess: 1 word');
+  await expect(distribution(page).last()).toHaveAccessibleName('Not solved: 0 words');
+  await dialog.getByRole('button', { name: 'Clear stats' }).click();
+  await dialog.getByRole('button', { name: 'Confirm clear' }).click();
+  await expect(dialog).toContainText('No finished words yet.');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Next word', exact: true }).click();
+  await guess(page, 'CHAIR');
+  await expect(page.getByRole('status')).toContainText('Nicely found');
+});
+
 test('corrupt history storage shows the empty state without blocking play', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem('word-practice-history-v1', '{'));
   await fixture(page);

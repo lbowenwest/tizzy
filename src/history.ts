@@ -79,6 +79,9 @@ function parseRecord(value: any): HistoryRecord | null {
     || !(value.result === 'solved' ? value.reason === null : value.result === 'failed' && reasons.includes(value.reason))
     || !count(value.guesses) || !count(value.unknown) || value.unknown > value.guesses
     || !count(value.durationMs) || !count(value.endedAt)) return null;
+  const limit = presetRules(value.group).maxGuesses;
+  // Solves need an actual guess within the preset's budget; failures may use none.
+  if (value.result === 'solved' && (value.guesses === 0 || (limit !== null && value.guesses > limit))) return null;
   const { id, roundId, answer, length, format, group, result, reason, guesses, unknown, durationMs, endedAt } = value;
   return { id, roundId, answer, length, format, group, result, reason, guesses, unknown, durationMs, endedAt };
 }
